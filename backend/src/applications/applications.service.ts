@@ -202,4 +202,32 @@ export class ApplicationsService {
         },
     });
   }
+
+  async assignResume(
+    userId: string,
+    applicationId: string,
+    resumeId: string,
+  ) {
+    await this.findOne(userId, applicationId);
+
+    const resume = await this.prisma.resume.findFirst({
+        where: {
+        id: resumeId,
+        userId,
+        },
+    });
+
+    if (!resume) {
+        throw new NotFoundException('Resume not found');
+    }
+
+    return this.prisma.jobApplication.update({
+        where: {
+        id: applicationId,
+        },
+        data: {
+        resumeId,
+        },
+    });
+  }
 }

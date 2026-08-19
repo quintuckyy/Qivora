@@ -17,6 +17,7 @@ import { CreateApplicationDto } from './dto/create-application.dto';
 import { UpdateApplicationDto } from './dto/update-application.dto';
 import { QueryApplicationsDto } from './dto/query-applications.dto';
 import { UpdateStatusDto } from './dto/update-status.dto';
+import { AssignResumeDto } from './dto/assign-resume.dto';
 
 type JwtUser = {
   sub: string;
@@ -84,10 +85,22 @@ export class ApplicationsController {
   }
 
   @Get(':id/history')
-  getHistory(
-   @CurrentUser() user: JwtUser,
-   @Param('id') id: string,
-  ) {
-    return this.applicationsService.getHistory(user.sub, id);
- }
+    getHistory(
+    @CurrentUser() user: JwtUser,
+    @Param('id') id: string,
+    ) {
+        return this.applicationsService.getHistory(user.sub, id);
+    }
+    @Patch(':id/resume')
+    assignResume(
+    @CurrentUser() user: JwtUser,
+    @Param('id') id: string,
+    @Body() dto: AssignResumeDto,
+    ) {
+    return this.applicationsService.assignResume(
+        user.sub,
+        id,
+        dto.resumeId,
+    );
+  }
 }
