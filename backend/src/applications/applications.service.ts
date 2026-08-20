@@ -230,6 +230,7 @@ export class ApplicationsService {
         },
     });
   }
+
   async getStatistics(userId: string) {
     const [
         total,
@@ -246,38 +247,51 @@ export class ApplicationsService {
         this.prisma.jobApplication.count({
         where: {
             userId,
-            status: 'APPLIED',
+            status: ApplicationStatus.APPLIED,
         },
         }),
 
         this.prisma.jobApplication.count({
         where: {
             userId,
-            status: 'ASSESSMENT',
+            status: ApplicationStatus.ASSESSMENT,
         },
         }),
 
         this.prisma.jobApplication.count({
         where: {
             userId,
-            status: 'INTERVIEW',
+            status: ApplicationStatus.INTERVIEW,
         },
         }),
 
         this.prisma.jobApplication.count({
         where: {
             userId,
-            status: 'OFFER',
+            status: ApplicationStatus.OFFER,
         },
         }),
 
         this.prisma.jobApplication.count({
         where: {
             userId,
-            status: 'REJECTED',
+            status: ApplicationStatus.REJECTED,
         },
         }),
     ]);
+
+    const applications = await this.prisma.jobApplication.findMany({
+        where: {
+        userId,
+        },
+        select: {
+        createdAt: true,
+        status: true,
+        },
+        orderBy: {
+        createdAt: 'asc',
+        },
+    });
 
     const percentage = (value: number, base: number) => {
         if (base === 0) {
@@ -286,6 +300,42 @@ export class ApplicationsService {
 
         return Number(((value / base) * 100).toFixed(2));
     };
+
+    const monthlyMap = new Map<string, number>();
+
+    for (const application of applications) {
+        const month = application.createdAt
+        .toISOString()
+        .slice(0, 7);
+
+        monthlyMap.set(
+        month,
+        (monthlyMap.get(month) ?? 0) + 1,
+        );
+    }
+
+    const monthlyApplications = Array.from(
+        monthlyMap.entries(),
+    )
+        .map(([month, count]) => ({
+        month,
+        count,
+        }))
+        .slice(-6);
+
+    const activePipeline =
+        applied + assessment + interview;
+
+    const successfulApplications = offer;
+
+    const averageApplicationsPerMonth =
+        monthlyApplications.length === 0
+        ? 0
+        : Number(
+            (
+                total / monthlyApplications.length
+            ).toFixed(2),
+            );
 
     return {
         totalApplications: total,
@@ -323,7 +373,14 @@ export class ApplicationsService {
             offer,
             interview + offer,
         ),
-      },
+        },
+
+        analytics: {
+        activePipeline,
+        successfulApplications,
+        averageApplicationsPerMonth,
+        monthlyApplications,
+        },
     };
-  }
+  }  
 }
