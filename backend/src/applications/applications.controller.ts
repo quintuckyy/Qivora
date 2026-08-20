@@ -18,7 +18,6 @@ import { UpdateApplicationDto } from './dto/update-application.dto';
 import { QueryApplicationsDto } from './dto/query-applications.dto';
 import { UpdateStatusDto } from './dto/update-status.dto';
 import { AssignResumeDto } from './dto/assign-resume.dto';
-
 type JwtUser = {
   sub: string;
 };
@@ -44,6 +43,13 @@ export class ApplicationsController {
     @Query() query: QueryApplicationsDto,
   ) {
     return this.applicationsService.findAll(user.sub, query);
+  }
+  
+  @Get('statistics')
+    getStatistics(
+    @CurrentUser() user: JwtUser,
+  ) {
+    return this.applicationsService.getStatistics(user.sub);
   }
 
   @Get(':id')
@@ -84,14 +90,7 @@ export class ApplicationsController {
     );
   }
 
-  @Get(':id/history')
-    getHistory(
-    @CurrentUser() user: JwtUser,
-    @Param('id') id: string,
-    ) {
-        return this.applicationsService.getHistory(user.sub, id);
-    }
-    @Patch(':id/resume')
+  @Patch(':id/resume')
     assignResume(
     @CurrentUser() user: JwtUser,
     @Param('id') id: string,

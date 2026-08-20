@@ -230,4 +230,100 @@ export class ApplicationsService {
         },
     });
   }
+  async getStatistics(userId: string) {
+    const [
+        total,
+        applied,
+        assessment,
+        interview,
+        offer,
+        rejected,
+    ] = await this.prisma.$transaction([
+        this.prisma.jobApplication.count({
+        where: { userId },
+        }),
+
+        this.prisma.jobApplication.count({
+        where: {
+            userId,
+            status: 'APPLIED',
+        },
+        }),
+
+        this.prisma.jobApplication.count({
+        where: {
+            userId,
+            status: 'ASSESSMENT',
+        },
+        }),
+
+        this.prisma.jobApplication.count({
+        where: {
+            userId,
+            status: 'INTERVIEW',
+        },
+        }),
+
+        this.prisma.jobApplication.count({
+        where: {
+            userId,
+            status: 'OFFER',
+        },
+        }),
+
+        this.prisma.jobApplication.count({
+        where: {
+            userId,
+            status: 'REJECTED',
+        },
+        }),
+    ]);
+
+    const percentage = (value: number, base: number) => {
+        if (base === 0) {
+        return 0;
+        }
+
+        return Number(((value / base) * 100).toFixed(2));
+    };
+
+    return {
+        totalApplications: total,
+
+        byStatus: {
+        applied,
+        assessment,
+        interview,
+        offer,
+        rejected,
+        },
+
+        rates: {
+        assessmentRate: percentage(
+            assessment + interview + offer,
+            total,
+        ),
+
+        interviewRate: percentage(
+            interview + offer,
+            total,
+        ),
+
+        offerRate: percentage(
+            offer,
+            total,
+        ),
+
+        rejectionRate: percentage(
+            rejected,
+            total,
+        ),
+
+        interviewToOfferRate: percentage(
+            offer,
+            interview + offer,
+        ),
+      },
+    };
+  }
 }
