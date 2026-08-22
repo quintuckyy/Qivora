@@ -13,16 +13,26 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CreateNoteDto } from './dto/create-note.dto';
 import { UpdateNoteDto } from './dto/update-note.dto';
 import { NotesService } from './notes.service';
+import { ApiCreatedResponse, ApiOkResponse, ApiBearerAuth, ApiOperation, ApiTags, } from '@nestjs/swagger';
 
 type JwtUser = {
   sub: string;
 };
 
+@ApiTags('notes')
+@ApiBearerAuth()
 @Controller('applications/:applicationId/notes')
 @UseGuards(JwtAuthGuard)
+
 export class NotesController {
   constructor(private readonly notesService: NotesService) {}
 
+  @ApiOperation({
+    summary: 'Add a note for a job application',
+  })
+  @ApiCreatedResponse({
+    description: 'Application note created successfully',
+  })
   @Post()
   create(
     @CurrentUser() user: JwtUser,
@@ -35,7 +45,12 @@ export class NotesController {
       dto,
     );
   }
-
+  @ApiOperation({
+    summary: 'Get all notes for a job application',
+  })
+  @ApiOkResponse({
+    description: 'Application notes retrieved successfully',
+  })
   @Get()
   findAll(
     @CurrentUser() user: JwtUser,
@@ -46,6 +61,10 @@ export class NotesController {
       applicationId,
     );
   }
+
+  @ApiOperation({
+    summary: 'Update an application note',
+  })
 
   @Patch(':noteId')
   update(
@@ -61,6 +80,9 @@ export class NotesController {
       dto,
     );
   }
+  @ApiOperation({
+    summary: 'Delete an application note',
+  })
 
   @Delete(':noteId')
   remove(

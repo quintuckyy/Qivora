@@ -18,15 +18,47 @@ import { extname } from 'node:path';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { ResumesService } from './resumes.service';
+import {
+  ApiCreatedResponse,
+  ApiOkResponse,
+  ApiNoContentResponse,
+  ApiBearerAuth,
+  ApiBody,
+  ApiConsumes,
+  ApiOperation,
+  ApiTags,
+} from '@nestjs/swagger';
 
 type JwtUser = {
   sub: string;
 };
 
+@ApiTags('resumes')
+@ApiBearerAuth()
 @Controller('resumes')
 @UseGuards(JwtAuthGuard)
 export class ResumesController {
   constructor(private readonly resumesService: ResumesService) {}
+
+  @ApiOperation({
+    summary: 'Upload a resume version',
+  })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+        type: 'object',
+        properties: {
+        file: {
+            type: 'string',
+            format: 'binary',
+        },
+        },
+        required: ['file'],
+    },
+    })
+    @ApiCreatedResponse({
+    description: 'Resume uploaded successfully',
+  })
 
   @Post()
   @UseInterceptors(
@@ -79,12 +111,25 @@ export class ResumesController {
     );
   }
 
+  @ApiOperation({
+    summary: 'Get all resume versions for the current user',
+  })
+  @ApiOkResponse({
+    description: 'Resume versions retrieved successfully',
+  })
   @Get()
   findAll(@CurrentUser() user: JwtUser) {
     return this.resumesService.findAll(user.sub);
   }
 
+  @ApiOperation({
+    summary: 'Download a resume',
+  })
+  @ApiOkResponse({
+    description: 'Resume file downloaded successfully',
+  })
   @Get(':id/download')
+
   async download(
     @CurrentUser() user: JwtUser,
     @Param('id') id: string,
@@ -101,7 +146,14 @@ export class ResumesController {
     );
   }
 
+  @ApiOperation({
+    summary: 'Delete a resume version',
+  })
+  @ApiOkResponse({
+    description: 'Resume deleted successfully',
+  })
   @Delete(':id')
+
   remove(
     @CurrentUser() user: JwtUser,
     @Param('id') id: string,

@@ -13,17 +13,27 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CreateInterviewDto } from './dto/create-interview.dto';
 import { UpdateInterviewDto } from './dto/update-interview.dto';
 import { InterviewsService } from './interviews.service';
+import { ApiCreatedResponse, ApiOkResponse, ApiBearerAuth, ApiOperation, ApiTags, } from '@nestjs/swagger';
 
 type JwtUser = {
   sub: string;
 };
 
+@ApiTags('interviews')
+@ApiBearerAuth()
 @Controller('applications/:applicationId/interviews')
 @UseGuards(JwtAuthGuard)
 export class InterviewsController {
   constructor(
     private readonly interviewsService: InterviewsService,
   ) {}
+
+  @ApiOperation({
+    summary: 'Schedule an interview for a job application',
+    })
+    @ApiCreatedResponse({
+    description: 'Interview scheduled successfully',
+  })
 
   @Post()
   create(
@@ -38,6 +48,13 @@ export class InterviewsController {
     );
   }
 
+  @ApiOperation({
+    summary: 'Get all interviews for a job application',
+  })
+  @ApiOkResponse({
+    description: 'Interviews retrieved successfully',
+  })
+
   @Get()
   findAll(
     @CurrentUser() user: JwtUser,
@@ -48,6 +65,10 @@ export class InterviewsController {
       applicationId,
     );
   }
+
+  @ApiOperation({
+    summary: 'Update an interview',
+  })
 
   @Patch(':interviewId')
   update(
@@ -63,6 +84,10 @@ export class InterviewsController {
       dto,
     );
   }
+
+  @ApiOperation({
+    summary: 'Delete an interview',
+  })
 
   @Delete(':interviewId')
   remove(
