@@ -1,0 +1,25 @@
+node_modules
+dist
+coverage
+uploads
+
+# tests and test infra (not needed in the runtime image)
+test
+*.spec.ts
+
+# generated Prisma client is regenerated during the image build
+src/generated
+
+# env and secrets (injected via docker-compose environment, never baked into the image)
+.env
+.env.test
+.env.*.local
+
+.git
+.gitignore
+.dockerignore
+Dockerfile
+README.md
+.vscode
+.idea
+*.log
