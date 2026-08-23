@@ -1,0 +1,3 @@
+# Environment variables for docker-compose (see .env.example for the template)
+.env
+.env.local
