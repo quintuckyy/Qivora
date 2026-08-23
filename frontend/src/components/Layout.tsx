@@ -11,6 +11,8 @@ export function Layout() {
     navigate('/login', { replace: true });
   }
 
+  const initial = (user?.firstName?.[0] ?? user?.email?.[0] ?? '?').toUpperCase();
+
   return (
     <div className="app-shell">
       <aside className="app-sidebar">
@@ -38,6 +40,7 @@ export function Layout() {
         </nav>
         <div className="app-sidebar-footer">
           <div className="app-user">
+            <span className="app-user-avatar">{initial}</span>
             <span className="app-user-email">{user?.email}</span>
           </div>
           <button type="button" className="app-logout-btn" onClick={handleLogout} title="Log out">

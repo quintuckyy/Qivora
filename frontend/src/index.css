@@ -52,7 +52,10 @@
 body {
   margin: 0;
   font-family: var(--font-sans);
-  background: var(--color-bg);
+  background: radial-gradient(ellipse 900px 600px at 8% -8%, rgba(34, 211, 238, 0.09), transparent 60%),
+    radial-gradient(ellipse 800px 700px at 100% 100%, rgba(52, 130, 211, 0.1), transparent 55%),
+    linear-gradient(180deg, #0b1120 0%, #070a13 100%);
+  background-attachment: fixed;
   color: var(--color-text);
   -webkit-font-smoothing: antialiased;
 }
@@ -88,14 +91,15 @@ a {
 .app-shell {
   min-height: 100vh;
   display: flex;
-  background: var(--color-bg);
+  background: transparent;
 }
 
 .app-sidebar {
   width: var(--sidebar-width);
   flex-shrink: 0;
-  background: var(--color-bg-elevated);
+  background: linear-gradient(180deg, var(--color-bg-elevated) 0%, #0a0f1d 100%);
   border-right: 1px solid var(--color-border);
+  box-shadow: 1px 0 0 rgba(34, 211, 238, 0.04);
   display: flex;
   flex-direction: column;
   position: sticky;
@@ -185,9 +189,25 @@ a {
 
 .app-user {
   display: flex;
-  flex-direction: column;
-  gap: 0.1rem;
+  align-items: center;
+  gap: 0.55rem;
   min-width: 0;
+}
+
+.app-user-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: var(--color-surface-2);
+  color: var(--color-primary);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 0.75rem;
+  box-shadow: inset 0 0 0 1px var(--color-primary-border);
 }
 
 .app-user-email {
@@ -315,11 +335,31 @@ a {
 /* --- Card --- */
 
 .card {
-  background: var(--color-surface);
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.025), transparent 45%), var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   padding: 1.4rem;
   box-shadow: var(--shadow-glow);
+  position: relative;
+  transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 1.25rem;
+  right: 1.25rem;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(34, 211, 238, 0.3), transparent);
+  pointer-events: none;
+}
+
+.card:hover {
+  transform: translateY(-2px);
+  border-color: var(--color-border-strong);
+  box-shadow: 0 0 0 1px rgba(34, 211, 238, 0.08), 0 20px 40px -14px rgba(2, 6, 16, 0.7),
+    0 0 32px -18px rgba(34, 211, 238, 0.25);
 }
 
 .card-header {
@@ -455,6 +495,7 @@ a {
   flex-direction: column;
   gap: 0.35rem;
   font-size: 0.88rem;
+  min-width: 0;
 }
 
 .field span {
@@ -472,6 +513,7 @@ a {
 input,
 select,
 textarea {
+  width: 100%;
   font: inherit;
   padding: 0.6rem 0.75rem;
   border: 1px solid var(--color-border-strong);
@@ -581,6 +623,10 @@ textarea {
   gap: 0.95rem;
 }
 
+.auth-card-wide {
+  max-width: 460px;
+}
+
 .auth-brand {
   display: flex;
   align-items: center;
@@ -609,8 +655,26 @@ textarea {
   gap: 1rem;
 }
 
+.stat-grid-hero {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 1rem;
+}
+
+@media (max-width: 1080px) {
+  .stat-grid-hero {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .stat-grid-hero {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
 .stat-tile {
-  background: var(--color-surface);
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.025), transparent 45%), var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   padding: 1.15rem 1.25rem;
@@ -618,7 +682,28 @@ textarea {
   flex-direction: column;
   gap: 0.65rem;
   box-shadow: var(--shadow-glow);
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.2s ease, border-color 0.2s ease;
 }
+
+.stat-tile::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 1.25rem;
+  right: 1.25rem;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(34, 211, 238, 0.3), transparent);
+}
+
+.stat-tile:hover {
+  transform: translateY(-3px);
+  border-color: var(--color-border-strong);
+  box-shadow: 0 0 0 1px rgba(34, 211, 238, 0.08), 0 20px 40px -14px rgba(2, 6, 16, 0.7),
+    0 0 32px -18px rgba(34, 211, 238, 0.25);
+}
+
 
 .stat-tile-top {
   display: flex;
@@ -630,10 +715,11 @@ textarea {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 34px;
-  height: 34px;
-  border-radius: 10px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
   flex-shrink: 0;
+  box-shadow: inset 0 0 0 1px currentColor;
 }
 
 .stat-icon-cyan {
@@ -690,7 +776,7 @@ textarea {
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  padding: 0.75rem 0.25rem;
+  padding: 0.5rem 0.25rem;
   border-bottom: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
 }
@@ -716,6 +802,29 @@ textarea {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.list-row-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.2rem;
+}
+
+.list-row-company {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.12rem 0.55rem;
+  border-radius: 999px;
+  background: var(--color-surface-2);
+  color: var(--color-text-muted);
+  font-size: 0.72rem;
+  font-weight: 600;
+  border: 1px solid var(--color-border-strong);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 200px;
 }
 
 .list-row-subtitle {
@@ -1051,7 +1160,29 @@ textarea {
   display: grid;
   grid-template-columns: 1.4fr 1fr;
   gap: 1.25rem;
-  align-items: start;
+  align-items: stretch;
+}
+
+.card-chart {
+  display: flex;
+  flex-direction: column;
+}
+
+.card-chart .linechart {
+  flex: 1;
+  min-height: 0;
+}
+
+.card-chart .linechart-svg {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.card-chart .state-empty {
+  flex: 1;
+  justify-content: center;
 }
 
 @media (max-width: 960px) {
@@ -1059,3 +1190,144 @@ textarea {
     grid-template-columns: 1fr;
   }
 }
+
+/* --- Donut chart --- */
+
+.donut-chart {
+  position: relative;
+  flex-shrink: 0;
+  filter: drop-shadow(0 8px 20px rgba(34, 211, 238, 0.16));
+}
+
+.donut-chart svg {
+  display: block;
+}
+
+.donut-chart circle {
+  stroke-linecap: butt;
+}
+
+.donut-chart-center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 0.1rem;
+}
+
+.donut-chart-center strong {
+  font-family: var(--font-display);
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  line-height: 1;
+}
+
+.donut-chart-center span {
+  color: var(--color-text-faint);
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.donut-layout {
+  display: flex;
+  align-items: center;
+  gap: 1.75rem;
+  flex-wrap: wrap;
+}
+
+.donut-legend {
+  flex: 1;
+  min-width: 160px;
+}
+
+/* --- Segmented pill toggle --- */
+
+.segmented {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-border-strong);
+  border-radius: 999px;
+}
+
+.segmented-btn {
+  border: none;
+  background: transparent;
+  color: var(--color-text-muted);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 0.35rem 0.8rem;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.segmented-btn:hover {
+  color: var(--color-text);
+}
+
+.segmented-btn-active,
+.segmented-btn-active:hover {
+  background: var(--color-primary);
+  color: #04141b;
+}
+
+/* --- Line chart --- */
+
+.linechart {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.linechart-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.linechart-baseline {
+  stroke: var(--color-border);
+  stroke-width: 1;
+}
+
+.linechart-line {
+  stroke: var(--color-primary);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  filter: drop-shadow(0 2px 6px rgba(34, 211, 238, 0.35));
+}
+
+.linechart-dot {
+  fill: var(--color-bg-elevated);
+  stroke: var(--color-primary);
+  stroke-width: 2;
+  transition: r 0.15s ease;
+}
+
+.linechart-dot:hover {
+  r: 5;
+}
+
+.linechart-labels {
+  display: flex;
+  gap: 0.4rem;
+  padding: 0 12px;
+}
+
+.linechart-label {
+  flex: 1;
+  text-align: center;
+  font-size: 0.72rem;
+  color: var(--color-text-faint);
+}
+

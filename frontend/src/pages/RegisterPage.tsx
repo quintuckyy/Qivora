@@ -36,7 +36,7 @@ export function RegisterPage() {
 
   return (
     <div className="auth-page">
-      <form className="auth-card" onSubmit={handleSubmit}>
+      <form className="auth-card auth-card-wide" onSubmit={handleSubmit}>
         <div className="auth-brand">
           <span className="app-brand-mark">JT</span>
           <span style={{ fontFamily: 'var(--font-display)', fontWeight: 800 }}>Job Tracker</span>
