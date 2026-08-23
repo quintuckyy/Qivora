@@ -37,6 +37,10 @@ export function RegisterPage() {
   return (
     <div className="auth-page">
       <form className="auth-card" onSubmit={handleSubmit}>
+        <div className="auth-brand">
+          <span className="app-brand-mark">JT</span>
+          <span style={{ fontFamily: 'var(--font-display)', fontWeight: 800 }}>Job Tracker</span>
+        </div>
         <h1>Create an account</h1>
         <p className="auth-subtitle">Start tracking your job search today.</p>
 

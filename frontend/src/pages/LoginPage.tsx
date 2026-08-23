@@ -32,6 +32,10 @@ export function LoginPage() {
   return (
     <div className="auth-page">
       <form className="auth-card" onSubmit={handleSubmit}>
+        <div className="auth-brand">
+          <span className="app-brand-mark">JT</span>
+          <span style={{ fontFamily: 'var(--font-display)', fontWeight: 800 }}>Job Tracker</span>
+        </div>
         <h1>Log in</h1>
         <p className="auth-subtitle">Track and manage your job applications.</p>
 

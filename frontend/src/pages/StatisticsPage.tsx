@@ -3,6 +3,15 @@ import { applicationsApi } from '../api/applications';
 import { LoadingState } from '../components/LoadingState';
 import { ErrorState } from '../components/ErrorState';
 import { EmptyState } from '../components/EmptyState';
+import { ActivityIcon, BriefcaseIcon, CheckCircleIcon, TrendingUpIcon } from '../components/icons';
+
+const STATUS_META: { key: 'applied' | 'assessment' | 'interview' | 'offer' | 'rejected'; label: string; color: string }[] = [
+  { key: 'applied', label: 'Applied', color: 'var(--color-blue)' },
+  { key: 'assessment', label: 'Assessment', color: 'var(--color-warning)' },
+  { key: 'interview', label: 'Interview', color: 'var(--color-primary)' },
+  { key: 'offer', label: 'Offer', color: 'var(--color-success)' },
+  { key: 'rejected', label: 'Rejected', color: 'var(--color-danger)' },
+];
 
 export function StatisticsPage() {
   const { status, data, error, refetch } = useAsync(() => applicationsApi.statistics(), []);
@@ -31,18 +40,38 @@ export function StatisticsPage() {
 
       <section className="stat-grid">
         <div className="stat-tile">
+          <div className="stat-tile-top">
+            <span className="stat-icon stat-icon-cyan">
+              <BriefcaseIcon />
+            </span>
+          </div>
           <span className="stat-value">{data.totalApplications}</span>
           <span className="stat-label">Total applications</span>
         </div>
         <div className="stat-tile">
+          <div className="stat-tile-top">
+            <span className="stat-icon stat-icon-blue">
+              <ActivityIcon />
+            </span>
+          </div>
           <span className="stat-value">{data.analytics.activePipeline}</span>
           <span className="stat-label">Active pipeline</span>
         </div>
         <div className="stat-tile">
+          <div className="stat-tile-top">
+            <span className="stat-icon stat-icon-success">
+              <CheckCircleIcon />
+            </span>
+          </div>
           <span className="stat-value">{data.analytics.successfulApplications}</span>
           <span className="stat-label">Offers</span>
         </div>
         <div className="stat-tile">
+          <div className="stat-tile-top">
+            <span className="stat-icon stat-icon-warning">
+              <TrendingUpIcon />
+            </span>
+          </div>
           <span className="stat-value">{data.analytics.averageApplicationsPerMonth}</span>
           <span className="stat-label">Avg. applications / month</span>
         </div>
@@ -51,26 +80,15 @@ export function StatisticsPage() {
       <section className="card">
         <h2>Applications by status</h2>
         <ul className="breakdown-list">
-          <li>
-            <span>Applied</span>
-            <span>{data.byStatus.applied}</span>
-          </li>
-          <li>
-            <span>Assessment</span>
-            <span>{data.byStatus.assessment}</span>
-          </li>
-          <li>
-            <span>Interview</span>
-            <span>{data.byStatus.interview}</span>
-          </li>
-          <li>
-            <span>Offer</span>
-            <span>{data.byStatus.offer}</span>
-          </li>
-          <li>
-            <span>Rejected</span>
-            <span>{data.byStatus.rejected}</span>
-          </li>
+          {STATUS_META.map((s) => (
+            <li key={s.key}>
+              <span>
+                <span className="breakdown-dot" style={{ background: s.color }} />
+                {s.label}
+              </span>
+              <span>{data.byStatus[s.key]}</span>
+            </li>
+          ))}
         </ul>
       </section>
 

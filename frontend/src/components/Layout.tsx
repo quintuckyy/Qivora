@@ -1,5 +1,6 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
+import { BriefcaseIcon, ChartIcon, FileIcon, GridIcon, LogoutIcon } from './icons';
 
 export function Layout() {
   const { user, logout } = useAuth();
@@ -12,25 +13,38 @@ export function Layout() {
 
   return (
     <div className="app-shell">
-      <header className="app-header">
-        <div className="app-header-inner">
-          <span className="app-brand">Job Application Tracker</span>
-          <nav className="app-nav">
-            <NavLink to="/" end>
-              Dashboard
-            </NavLink>
-            <NavLink to="/applications">Applications</NavLink>
-            <NavLink to="/resumes">Resumes</NavLink>
-            <NavLink to="/statistics">Statistics</NavLink>
-          </nav>
+      <aside className="app-sidebar">
+        <div className="app-brand">
+          <span className="app-brand-mark">JT</span>
+          <span>Job Tracker</span>
+        </div>
+        <nav className="app-nav">
+          <NavLink to="/" end>
+            <GridIcon />
+            <span>Dashboard</span>
+          </NavLink>
+          <NavLink to="/applications">
+            <BriefcaseIcon />
+            <span>Applications</span>
+          </NavLink>
+          <NavLink to="/resumes">
+            <FileIcon />
+            <span>Resumes</span>
+          </NavLink>
+          <NavLink to="/statistics">
+            <ChartIcon />
+            <span>Statistics</span>
+          </NavLink>
+        </nav>
+        <div className="app-sidebar-footer">
           <div className="app-user">
             <span className="app-user-email">{user?.email}</span>
-            <button type="button" className="btn btn-secondary" onClick={handleLogout}>
-              Log out
-            </button>
           </div>
+          <button type="button" className="app-logout-btn" onClick={handleLogout} title="Log out">
+            <LogoutIcon />
+          </button>
         </div>
-      </header>
+      </aside>
       <main className="app-main">
         <Outlet />
       </main>

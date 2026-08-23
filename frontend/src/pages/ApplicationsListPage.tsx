@@ -8,6 +8,7 @@ import { ErrorState } from '../components/ErrorState';
 import { EmptyState } from '../components/EmptyState';
 import { StatusBadge } from '../components/StatusBadge';
 import { Pagination } from '../components/Pagination';
+import { PlusIcon, SearchIcon } from '../components/icons';
 
 const PAGE_SIZE = 10;
 
@@ -61,18 +62,22 @@ export function ApplicationsListPage() {
       <div className="page-header">
         <h1>Applications</h1>
         <Link to="/applications/new" className="btn btn-primary">
+          <PlusIcon />
           New application
         </Link>
       </div>
 
       <div className="toolbar">
-        <input
-          type="search"
-          placeholder="Search company, position, or location…"
-          value={searchInput}
-          onChange={(e) => setSearchInput(e.target.value)}
-          className="toolbar-search"
-        />
+        <div className="toolbar-search-wrap">
+          <SearchIcon />
+          <input
+            type="search"
+            placeholder="Search company, position, or location…"
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            className="toolbar-search"
+          />
+        </div>
 
         <select value={status} onChange={(e) => setStatus(e.target.value as ApplicationStatus | '')}>
           <option value="">All statuses</option>
