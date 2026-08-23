@@ -1156,6 +1156,22 @@ textarea {
   margin: 0 0 0.9rem;
 }
 
+.suggestion-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.suggestion-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.suggestion-card p {
+  margin: 0;
+}
+
 .dashboard-grid {
   display: grid;
   grid-template-columns: 1.4fr 1fr;

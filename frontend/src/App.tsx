@@ -10,6 +10,7 @@ import { ApplicationCreatePage } from './pages/ApplicationCreatePage';
 import { ApplicationDetailPage } from './pages/ApplicationDetailPage';
 import { ResumesPage } from './pages/ResumesPage';
 import { StatisticsPage } from './pages/StatisticsPage';
+import { EmailSyncPage } from './pages/EmailSyncPage';
 import { NotFoundPage } from './pages/NotFoundPage';
 
 export function App() {
@@ -42,6 +43,7 @@ export function App() {
               <Route path="/applications/:id" element={<ApplicationDetailPage />} />
               <Route path="/resumes" element={<ResumesPage />} />
               <Route path="/statistics" element={<StatisticsPage />} />
+              <Route path="/email-sync" element={<EmailSyncPage />} />
             </Route>
           </Route>
 

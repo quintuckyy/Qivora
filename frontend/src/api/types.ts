@@ -96,6 +96,52 @@ export interface Resume {
   updatedAt: string;
 }
 
+export type DetectedEmailType =
+  | 'APPLICATION_RECEIVED'
+  | 'ASSESSMENT'
+  | 'INTERVIEW'
+  | 'REJECTION'
+  | 'OFFER'
+  | 'OTHER';
+
+export type SuggestedAction = 'CREATE_APPLICATION' | 'UPDATE_STATUS' | 'NONE';
+
+export interface GmailStatus {
+  connected: boolean;
+  email: string | null;
+  lastSyncedAt: string | null;
+}
+
+export interface GmailSyncResult {
+  scanned: number;
+  newlyProcessed: number;
+  suggestionsCreated: number;
+  autoDismissed: number;
+}
+
+export interface MatchedApplicationSummary {
+  id: string;
+  company: string;
+  position: string;
+  status: ApplicationStatus;
+}
+
+export interface EmailSuggestion {
+  id: string;
+  subject: string | null;
+  fromAddress: string | null;
+  receivedAt: string | null;
+  detectedType: DetectedEmailType;
+  confidence: number;
+  extractedCompany: string | null;
+  extractedPosition: string | null;
+  extractedSource: string | null;
+  suggestedAction: SuggestedAction;
+  matchedApplicationId: string | null;
+  matchedApplication: MatchedApplicationSummary | null;
+  createdAt: string;
+}
+
 export interface StatisticsResponse {
   totalApplications: number;
   byStatus: {

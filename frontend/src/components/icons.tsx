@@ -132,3 +132,12 @@ export function PlusIcon(props: SVGProps<SVGSVGElement>) {
     </Icon>
   );
 }
+
+export function MailIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Icon {...props}>
+      <rect x="2.5" y="4.5" width="19" height="15" rx="2" />
+      <path d="M2.5 6.5l9.5 7 9.5-7" />
+    </Icon>
+  );
+}

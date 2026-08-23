@@ -22,6 +22,27 @@ enum ApplicationStatus {
   REJECTED
 }
 
+enum DetectedEmailType {
+  APPLICATION_RECEIVED
+  ASSESSMENT
+  INTERVIEW
+  REJECTION
+  OFFER
+  OTHER
+}
+
+enum SuggestedAction {
+  CREATE_APPLICATION
+  UPDATE_STATUS
+  NONE
+}
+
+enum SuggestionStatus {
+  PENDING
+  CONFIRMED
+  DISMISSED
+}
+
 model User {
   id           String   @id @default(uuid())
   email        String   @unique
@@ -34,6 +55,9 @@ model User {
 
   applications JobApplication[]
   resumes Resume[]
+
+  gmailConnection GmailConnection?
+  processedEmails ProcessedEmail[]
 
   @@map("users")
 }
@@ -61,6 +85,8 @@ model JobApplication {
   history    ApplicationHistory[]
   interviews Interview[]
   notes      ApplicationNote[]
+
+  matchedByEmails ProcessedEmail[]
 
   @@index([userId])
   @@index([status])
@@ -134,4 +160,65 @@ model Resume {
   @@index([userId])
   @@index([createdAt])
   @@map("resumes")
+}
+
+/** One Gmail account connected per user via OAuth. Access/refresh tokens are
+ * stored encrypted at rest (see email-sync/encryption.ts) — never logged or
+ * returned to the client. */
+model GmailConnection {
+  id String @id @default(uuid())
+
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  email                 String
+  accessTokenEncrypted  String
+  refreshTokenEncrypted String
+  tokenExpiresAt        DateTime
+  scope                 String
+
+  lastSyncedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("gmail_connections")
+}
+
+/** One row per Gmail message a sync run has looked at — doubles as the
+ * dedup ledger (unique on userId+gmailMessageId, checked before an email is
+ * ever re-fetched or re-classified) and the review queue for the user to
+ * confirm or dismiss a detected application update. */
+model ProcessedEmail {
+  id String @id @default(uuid())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  gmailMessageId String
+  gmailThreadId  String?
+  subject        String?
+  fromAddress    String?
+  receivedAt     DateTime?
+
+  detectedType DetectedEmailType
+  confidence   Float
+
+  extractedCompany  String?
+  extractedPosition String?
+  extractedDate     DateTime?
+  extractedSource   String?
+
+  suggestedAction SuggestedAction
+  status          SuggestionStatus @default(PENDING)
+
+  matchedApplicationId String?
+  matchedApplication   JobApplication? @relation(fields: [matchedApplicationId], references: [id], onDelete: SetNull)
+
+  createdAt  DateTime  @default(now())
+  reviewedAt DateTime?
+
+  @@unique([userId, gmailMessageId])
+  @@index([userId, status])
+  @@map("processed_emails")
 }

@@ -1,6 +1,6 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
-import { BriefcaseIcon, ChartIcon, FileIcon, GridIcon, LogoutIcon } from './icons';
+import { BriefcaseIcon, ChartIcon, FileIcon, GridIcon, LogoutIcon, MailIcon } from './icons';
 
 export function Layout() {
   const { user, logout } = useAuth();
@@ -36,6 +36,10 @@ export function Layout() {
           <NavLink to="/statistics">
             <ChartIcon />
             <span>Statistics</span>
+          </NavLink>
+          <NavLink to="/email-sync">
+            <MailIcon />
+            <span>Email Sync</span>
           </NavLink>
         </nav>
         <div className="app-sidebar-footer">

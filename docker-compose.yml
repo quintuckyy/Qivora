@@ -44,6 +44,12 @@ services:
       # Must match the URL the browser actually uses to reach the frontend container
       # (see FRONTEND_PORT below) — the backend's CORS check is browser-origin-based.
       FRONTEND_ORIGIN: ${FRONTEND_ORIGIN:-http://localhost:5173}
+      # Gmail email sync — optional. Blank/unset GOOGLE_CLIENT_ID disables the
+      # feature without affecting anything else (see backend/.env.example).
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      GOOGLE_OAUTH_REDIRECT_URI: ${GOOGLE_OAUTH_REDIRECT_URI:-http://localhost:5173/email-sync}
+      EMAIL_SYNC_ENCRYPTION_KEY: ${EMAIL_SYNC_ENCRYPTION_KEY:-}
 
     ports:
       - "${BACKEND_PORT:-3000}:3000"
