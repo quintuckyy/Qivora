@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Job Tracker — LinkedIn Companion",
-  "version": "0.1.0",
-  "description": "Save a job posting from LinkedIn straight into your Job Application Tracker.",
+  "name": "Job Tracker — Job Board Companion",
+  "version": "0.2.0",
+  "description": "Save a job posting from LinkedIn, Indeed, or JobStreet straight into your Job Application Tracker.",
   "action": {
     "default_popup": "popup.html",
     "default_title": "Save to Job Tracker"
@@ -10,13 +10,26 @@
   "permissions": ["storage", "activeTab", "scripting"],
   "host_permissions": [
     "https://www.linkedin.com/*",
+    "https://*.indeed.com/*",
+    "https://*.jobstreet.com/*",
+    "https://*.jobstreet.com.ph/*",
+    "https://*.jobstreet.com.sg/*",
+    "https://*.jobstreet.co.id/*",
     "http://localhost:3000/*"
   ],
   "content_scripts": [
     {
-      "matches": ["https://www.linkedin.com/jobs/*"],
-      "js": ["content.js"],
-      "run_at": "document_idle"
+      "matches": [
+        "https://www.linkedin.com/jobs/*",
+        "https://*.indeed.com/viewjob*",
+        "https://*.indeed.com/jobs*",
+        "https://*.jobstreet.com/job/*",
+        "https://*.jobstreet.com.ph/job/*",
+        "https://*.jobstreet.com.sg/job/*",
+        "https://*.jobstreet.co.id/job/*"
+      ],
+      "run_at": "document_idle",
+      "js": ["content.js"]
     }
   ]
 }

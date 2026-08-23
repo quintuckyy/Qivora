@@ -3,6 +3,7 @@ import { saveApplication, checkDuplicate, type ExistingApplicationSummary } from
 import { FRONTEND_URL } from '../services/config';
 import { ApiError } from '../services/api-client';
 import { emptyJob, type ExtractedJob } from '../platforms/types';
+import { PLATFORM_LABELS } from '../platforms';
 import type { ExtractJobMessage, ExtractJobResponse } from '../content/content-script';
 
 const app = document.getElementById('app')!;
@@ -15,16 +16,16 @@ function escapeHtml(value: string): string {
 
 async function getActiveTabExtraction(): Promise<ExtractJobResponse> {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-  if (!tab?.id) return { supported: false, job: null };
+  if (!tab?.id) return { supported: false, platform: null, job: null };
 
   try {
     const message: ExtractJobMessage = { type: 'EXTRACT_JOB' };
     const response = (await chrome.tabs.sendMessage(tab.id, message)) as ExtractJobResponse;
-    return response ?? { supported: false, job: null };
+    return response ?? { supported: false, platform: null, job: null };
   } catch {
     // No content script on this tab — not a matching job page, or it hasn't
     // finished injecting yet. Either way, degrade to an empty, editable form.
-    return { supported: false, job: null };
+    return { supported: false, platform: null, job: null };
   }
 }
 
@@ -100,6 +101,7 @@ function renderAlreadySaved(user: StoredUser, application: ExistingApplicationSu
 interface ReadyOptions {
   user: StoredUser;
   supported: boolean;
+  platform: string | null;
   job: ExtractedJob;
   saving?: boolean;
   banner?: { type: 'error' | 'success'; text: string };
@@ -107,7 +109,8 @@ interface ReadyOptions {
 }
 
 function renderReady(opts: ReadyOptions) {
-  const { user, supported, job, banner, saving, viewLink } = opts;
+  const { user, supported, platform, job, banner, saving, viewLink } = opts;
+  const platformLabel = platform ? PLATFORM_LABELS[platform] ?? platform : null;
 
   app.innerHTML = `
     <div class="footer-row">
@@ -115,9 +118,9 @@ function renderReady(opts: ReadyOptions) {
       <button type="button" class="btn-link" id="logout-btn">Log out</button>
     </div>
     ${
-      !supported
-        ? `<div class="banner">Open a LinkedIn job posting to auto-fill these fields — you can also fill them in by hand.</div>`
-        : ''
+      supported && platformLabel
+        ? `<div class="banner banner-info">Detected: ${escapeHtml(platformLabel)}</div>`
+        : `<div class="banner">Open a LinkedIn, Indeed, or JobStreet job posting to auto-fill these fields — you can also fill them in by hand.</div>`
     }
     ${banner ? `<div class="banner ${banner.type === 'error' ? 'banner-error' : 'banner-success'}">${escapeHtml(banner.text)}</div>` : ''}
     ${viewLink ? `<p><a href="${escapeHtml(FRONTEND_URL)}/applications" target="_blank" rel="noreferrer">View in Job Tracker ↗</a></p>` : ''}
@@ -160,7 +163,7 @@ function renderReady(opts: ReadyOptions) {
       jobUrl: (document.getElementById('field-jobUrl') as HTMLInputElement).value.trim(),
     };
 
-    renderReady({ user, supported, job: nextJob, saving: true });
+    renderReady({ user, supported, platform, job: nextJob, saving: true });
 
     const session = await getSession();
     if (!session) {
@@ -173,6 +176,7 @@ function renderReady(opts: ReadyOptions) {
       renderReady({
         user,
         supported,
+        platform,
         job: nextJob,
         banner: { type: 'success', text: 'Saved to Job Tracker.' },
         viewLink: true,
@@ -184,7 +188,7 @@ function renderReady(opts: ReadyOptions) {
         return;
       }
       const message = err instanceof ApiError ? err.message : 'Unable to save this application.';
-      renderReady({ user, supported, job: nextJob, banner: { type: 'error', text: message } });
+      renderReady({ user, supported, platform, job: nextJob, banner: { type: 'error', text: message } });
     }
   });
 }
@@ -230,7 +234,7 @@ async function start() {
     }
   }
 
-  renderReady({ user: session.user, supported: extraction.supported, job });
+  renderReady({ user: session.user, supported: extraction.supported, platform: extraction.platform, job });
 }
 
 start();

@@ -1,12 +1,18 @@
 import type { PlatformExtractor } from './types';
 import { linkedInExtractor } from './linkedin';
+import { indeedExtractor } from './indeed';
+import { jobStreetExtractor } from './jobstreet';
 
 export type { ExtractedJob, PlatformExtractor } from './types';
 export { emptyJob } from './types';
 
-// Add Indeed/JobStreet extractors here later — each is a self-contained
-// module exporting a PlatformExtractor, same shape as linkedin.ts.
-const PLATFORMS: PlatformExtractor[] = [linkedInExtractor];
+const PLATFORMS: PlatformExtractor[] = [linkedInExtractor, indeedExtractor, jobStreetExtractor];
+
+export const PLATFORM_LABELS: Record<string, string> = {
+  linkedin: 'LinkedIn',
+  indeed: 'Indeed',
+  jobstreet: 'JobStreet',
+};
 
 export function findPlatformForUrl(href: string): PlatformExtractor | null {
   let url: URL;

@@ -3,16 +3,20 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "description": "Browser extension companion for the Job Application Tracker — saves job postings from supported job sites (LinkedIn first) into the tracker.",
+  "description": "Browser extension companion for the Job Application Tracker — saves job postings from LinkedIn, Indeed, and JobStreet into the tracker.",
   "scripts": {
     "build": "vite build --config vite.popup.config.ts && vite build --config vite.content.config.ts && node scripts/copy-static.mjs",
     "dev": "vite build --config vite.popup.config.ts --watch",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
   },
   "devDependencies": {
     "@types/chrome": "^0.0.287",
+    "@types/jsdom": "^30.0.0",
     "@types/node": "^22.10.5",
+    "jsdom": "^30.0.1",
     "typescript": "^5.7.3",
-    "vite": "^6.0.7"
+    "vite": "^6.0.7",
+    "vitest": "^4.1.11"
   }
 }

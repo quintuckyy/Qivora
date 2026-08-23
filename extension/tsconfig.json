@@ -15,5 +15,5 @@
     "isolatedModules": true,
     "noEmit": true
   },
-  "include": ["src", "vite.popup.config.ts", "vite.content.config.ts"]
+  "include": ["src", "test", "vite.popup.config.ts", "vite.content.config.ts"]
 }
