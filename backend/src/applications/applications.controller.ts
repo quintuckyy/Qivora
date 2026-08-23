@@ -18,6 +18,7 @@ import { UpdateApplicationDto } from './dto/update-application.dto';
 import { QueryApplicationsDto } from './dto/query-applications.dto';
 import { UpdateStatusDto } from './dto/update-status.dto';
 import { AssignResumeDto } from './dto/assign-resume.dto';
+import { CheckDuplicateDto } from './dto/check-duplicate.dto';
 import { ApiBearerAuth, ApiNotFoundResponse, ApiBadRequestResponse, ApiOperation, ApiTags, ApiOkResponse } from '@nestjs/swagger';
 
 type JwtUser = {
@@ -127,6 +128,32 @@ export class ApplicationsController {
     @CurrentUser() user: JwtUser,
   ) {
     return this.applicationsService.getStatistics(user.sub);
+  }
+
+  @ApiOperation({
+    summary: 'Check whether the caller already has an application for a job URL',
+  })
+  @ApiOkResponse({
+    description: 'Duplicate check result',
+    schema: {
+      example: {
+        exists: true,
+        application: {
+          id: 'd5c41086-0173-45cd-946e-d48712c7bd52',
+          company: 'Infor',
+          position: 'Senior Software Engineer',
+          status: 'APPLIED',
+          createdAt: '2026-08-22T12:00:00.000Z',
+        },
+      },
+    },
+  })
+  @Get('check-duplicate')
+  checkDuplicate(
+    @CurrentUser() user: JwtUser,
+    @Query() query: CheckDuplicateDto,
+  ) {
+    return this.applicationsService.checkDuplicate(user.sub, query.jobUrl);
   }
 
   @ApiOperation({

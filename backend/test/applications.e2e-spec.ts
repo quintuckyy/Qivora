@@ -84,6 +84,75 @@ describe('Applications (e2e)', () => {
     });
   });
 
+  describe('GET /applications/check-duplicate', () => {
+    it('reports exists: false for a job URL not yet saved', async () => {
+      const response = await request(app.getHttpServer())
+        .get('/applications/check-duplicate')
+        .query({ jobUrl: 'https://www.linkedin.com/jobs/view/999999/' })
+        .set('Authorization', authHeader)
+        .expect(200);
+
+      expect(response.body).toEqual({ exists: false, application: null });
+    });
+
+    it('reports exists: true with a summary once that job URL has been saved', async () => {
+      const jobUrl = 'https://www.linkedin.com/jobs/view/1234567890/';
+      const created = await createApplication({ jobUrl });
+
+      const response = await request(app.getHttpServer())
+        .get('/applications/check-duplicate')
+        .query({ jobUrl })
+        .set('Authorization', authHeader)
+        .expect(200);
+
+      expect(response.body).toEqual({
+        exists: true,
+        application: expect.objectContaining({
+          id: created.id,
+          company: created.company,
+          position: created.position,
+          status: created.status,
+        }),
+      });
+    });
+
+    it("does not see another user's saved job URL", async () => {
+      const jobUrl = 'https://www.linkedin.com/jobs/view/1234567890/';
+      await createApplication({ jobUrl });
+      const otherUser = await registerAndLogin(app);
+
+      const response = await request(app.getHttpServer())
+        .get('/applications/check-duplicate')
+        .query({ jobUrl })
+        .set('Authorization', `Bearer ${otherUser.accessToken}`)
+        .expect(200);
+
+      expect(response.body).toEqual({ exists: false, application: null });
+    });
+
+    it('rejects a request without a jobUrl', async () => {
+      await request(app.getHttpServer())
+        .get('/applications/check-duplicate')
+        .set('Authorization', authHeader)
+        .expect(400);
+    });
+
+    it('rejects an invalid jobUrl', async () => {
+      await request(app.getHttpServer())
+        .get('/applications/check-duplicate')
+        .query({ jobUrl: 'not-a-url' })
+        .set('Authorization', authHeader)
+        .expect(400);
+    });
+
+    it('rejects requests without a bearer token', async () => {
+      await request(app.getHttpServer())
+        .get('/applications/check-duplicate')
+        .query({ jobUrl: 'https://www.linkedin.com/jobs/view/1/' })
+        .expect(401);
+    });
+  });
+
   describe('GET /applications/:id', () => {
     it('returns the application when owned by the caller', async () => {
       const created = await createApplication();

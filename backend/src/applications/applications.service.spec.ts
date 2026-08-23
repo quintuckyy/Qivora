@@ -113,6 +113,45 @@ describe('ApplicationsService', () => {
     });
   });
 
+  describe('checkDuplicate', () => {
+    it('reports exists: true with a summary when the user already has that job URL saved', async () => {
+      const jobUrl = 'https://www.linkedin.com/jobs/view/1234567890/';
+      const summary = {
+        id: applicationId,
+        company: 'Infor',
+        position: 'Senior Software Engineer',
+        status: ApplicationStatus.APPLIED,
+        createdAt: new Date('2026-01-15T00:00:00.000Z'),
+      };
+      prisma.jobApplication.findFirst.mockResolvedValue(summary);
+
+      const result = await service.checkDuplicate(userId, jobUrl);
+
+      expect(prisma.jobApplication.findFirst).toHaveBeenCalledWith({
+        where: { userId, jobUrl },
+        select: {
+          id: true,
+          company: true,
+          position: true,
+          status: true,
+          createdAt: true,
+        },
+      });
+      expect(result).toEqual({ exists: true, application: summary });
+    });
+
+    it('reports exists: false when no application with that job URL is owned by the user', async () => {
+      prisma.jobApplication.findFirst.mockResolvedValue(null);
+
+      const result = await service.checkDuplicate(
+        userId,
+        'https://www.linkedin.com/jobs/view/nope/',
+      );
+
+      expect(result).toEqual({ exists: false, application: null });
+    });
+  });
+
   describe('findOne', () => {
     it('returns the application when owned by the user', async () => {
       const application = buildApplication();

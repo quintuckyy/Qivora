@@ -25,6 +25,26 @@ export class ApplicationsService {
     });
   }
 
+  /** Scoped to the caller so one user's saved jobs never leak into another's
+   * duplicate check — same ownership boundary as every other query here. */
+  async checkDuplicate(userId: string, jobUrl: string) {
+    const application = await this.prisma.jobApplication.findFirst({
+      where: { userId, jobUrl },
+      select: {
+        id: true,
+        company: true,
+        position: true,
+        status: true,
+        createdAt: true,
+      },
+    });
+
+    return {
+      exists: application !== null,
+      application,
+    };
+  }
+
   async findAll(userId: string, query: QueryApplicationsDto) {
     const {
         page,

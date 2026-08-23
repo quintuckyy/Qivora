@@ -8,6 +8,7 @@ describe('ApplicationsController', () => {
     create: jest.Mock;
     findAll: jest.Mock;
     getStatistics: jest.Mock;
+    checkDuplicate: jest.Mock;
     findOne: jest.Mock;
     update: jest.Mock;
     updateStatus: jest.Mock;
@@ -22,6 +23,7 @@ describe('ApplicationsController', () => {
       create: jest.fn(),
       findAll: jest.fn(),
       getStatistics: jest.fn(),
+      checkDuplicate: jest.fn(),
       findOne: jest.fn(),
       update: jest.fn(),
       updateStatus: jest.fn(),
@@ -64,6 +66,17 @@ describe('ApplicationsController', () => {
     const result = await controller.getStatistics(user);
 
     expect(service.getStatistics).toHaveBeenCalledWith(user.sub);
+    expect(result).toBe(expected);
+  });
+
+  it('delegates checkDuplicate to the service with the jobUrl from the query', async () => {
+    const query = { jobUrl: 'https://www.linkedin.com/jobs/view/1234567890/' };
+    const expected = { exists: true, application: { id: 'app-1' } };
+    service.checkDuplicate.mockResolvedValue(expected);
+
+    const result = await controller.checkDuplicate(user, query as never);
+
+    expect(service.checkDuplicate).toHaveBeenCalledWith(user.sub, query.jobUrl);
     expect(result).toBe(expected);
   });
 
