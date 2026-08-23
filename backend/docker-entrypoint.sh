@@ -5,4 +5,4 @@ echo "Applying Prisma migrations..."
 npx prisma migrate deploy
 
 echo "Starting Job Application Tracker API..."
-exec node dist/src/main.js
+exec node dist/main.js
