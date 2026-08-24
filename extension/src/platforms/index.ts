@@ -14,12 +14,12 @@ export const PLATFORM_LABELS: Record<string, string> = {
   jobstreet: 'JobStreet',
 };
 
-export function findPlatformForUrl(href: string): PlatformExtractor | null {
+export function findPlatformForUrl(href: string, doc?: Document): PlatformExtractor | null {
   let url: URL;
   try {
     url = new URL(href);
   } catch {
     return null;
   }
-  return PLATFORMS.find((platform) => platform.matches(url)) ?? null;
+  return PLATFORMS.find((platform) => platform.matches(url, doc)) ?? null;
 }

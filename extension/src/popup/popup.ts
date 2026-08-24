@@ -14,19 +14,64 @@ function escapeHtml(value: string): string {
   return div.innerHTML;
 }
 
+/** Declarative content_scripts alone miss two common cases: a tab that was
+ * already open before the extension loaded, and a same-page SPA navigation
+ * (LinkedIn/Indeed/JobStreet are all client-side routed) that never fires a
+ * fresh document load. Re-injecting on every popup open — safe/idempotent,
+ * see the guard in content-script.ts — fixes both without needing the user
+ * to refresh the tab first. */
+async function ensureContentScriptInjected(tabId: number): Promise<void> {
+  try {
+    await chrome.scripting.executeScript({ target: { tabId }, files: ['content.js'] });
+  } catch {
+    // Fails for pages the extension can't script (chrome://, the Web Store,
+    // etc.) — the sendMessage attempt below will then fail too and we
+    // correctly fall back to the empty, editable form.
+  }
+}
+
+function isIncomplete(job: Partial<ExtractedJob> | null): boolean {
+  return !job || !job.position || !job.company || !job.location;
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 async function getActiveTabExtraction(): Promise<ExtractJobResponse> {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   if (!tab?.id) return { supported: false, platform: null, job: null };
+  const tabId = tab.id;
 
-  try {
-    const message: ExtractJobMessage = { type: 'EXTRACT_JOB' };
-    const response = (await chrome.tabs.sendMessage(tab.id, message)) as ExtractJobResponse;
-    return response ?? { supported: false, platform: null, job: null };
-  } catch {
-    // No content script on this tab — not a matching job page, or it hasn't
-    // finished injecting yet. Either way, degrade to an empty, editable form.
-    return { supported: false, platform: null, job: null };
+  await ensureContentScriptInjected(tabId);
+
+  async function attempt(): Promise<ExtractJobResponse> {
+    try {
+      const message: ExtractJobMessage = { type: 'EXTRACT_JOB' };
+      const response = (await chrome.tabs.sendMessage(tabId, message)) as ExtractJobResponse;
+      return response ?? { supported: false, platform: null, job: null };
+    } catch {
+      // Nothing listening (truly unsupported page) — degrade to an empty,
+      // editable form.
+      return { supported: false, platform: null, job: null };
+    }
   }
+
+  let result = await attempt();
+
+  // These sites render the job-details panel asynchronously after a route
+  // change, and the page <title> often updates before that panel's DOM
+  // does — so a first attempt right when the popup opens can catch
+  // position/company from the <title> fallback while the real DOM nodes
+  // (especially location) are still empty. A couple of short retries covers
+  // that without making the popup feel slow on the common case where
+  // everything was already there.
+  for (let i = 0; i < 3 && result.supported && isIncomplete(result.job); i++) {
+    await sleep(350);
+    result = await attempt();
+  }
+
+  return result;
 }
 
 function renderLoading(message = 'Checking your session…') {
