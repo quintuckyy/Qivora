@@ -82,6 +82,36 @@ describe('Applications (e2e)', () => {
         .send({ company: 'Infor', position: 'Engineer', status: 'BOGUS' })
         .expect(400);
     });
+
+    it('rejects a second save of the same jobUrl for the same user with 409, not a raw 500', async () => {
+      const jobUrl = 'https://ph.jobstreet.com/job/94092861';
+      await createApplication({ jobUrl });
+
+      const response = await request(app.getHttpServer())
+        .post('/applications')
+        .set('Authorization', authHeader)
+        .send({ company: 'Infor', position: 'Senior Software Engineer', jobUrl })
+        .expect(409);
+
+      expect(response.body.message).toMatch(/already saved/i);
+    });
+
+    it('allows two different users to independently save the same jobUrl', async () => {
+      const jobUrl = 'https://ph.jobstreet.com/job/94092861';
+      await createApplication({ jobUrl });
+
+      const otherUser = await registerAndLogin(app);
+      await request(app.getHttpServer())
+        .post('/applications')
+        .set('Authorization', `Bearer ${otherUser.accessToken}`)
+        .send({ company: 'Infor', position: 'Senior Software Engineer', jobUrl })
+        .expect(201);
+    });
+
+    it('allows saving multiple applications with no jobUrl at all', async () => {
+      await createApplication({ jobUrl: undefined, company: 'Infor A' });
+      await createApplication({ jobUrl: undefined, company: 'Infor B' });
+    });
   });
 
   describe('GET /applications/check-duplicate', () => {
@@ -255,7 +285,7 @@ describe('Applications (e2e)', () => {
 
     it('paginates results and reports meta', async () => {
       for (let i = 0; i < 5; i += 1) {
-        await createApplication({ company: `Company ${i}` });
+        await createApplication({ company: `Company ${i}`, jobUrl: `https://careers.example.com/jobs/${i}` });
       }
 
       const response = await request(app.getHttpServer())
@@ -274,8 +304,11 @@ describe('Applications (e2e)', () => {
     });
 
     it('filters by status', async () => {
-      await createApplication({ company: 'Applied Co' });
-      const assessment = await createApplication({ company: 'Assessment Co' });
+      await createApplication({ company: 'Applied Co', jobUrl: 'https://careers.example.com/jobs/applied' });
+      const assessment = await createApplication({
+        company: 'Assessment Co',
+        jobUrl: 'https://careers.example.com/jobs/assessment',
+      });
       await request(app.getHttpServer())
         .patch(`/applications/${assessment.id}/status`)
         .set('Authorization', authHeader)
@@ -293,8 +326,18 @@ describe('Applications (e2e)', () => {
     });
 
     it('searches across company, position, and location (case-insensitive)', async () => {
-      await createApplication({ company: 'Infor', position: 'Engineer', location: 'Manila' });
-      await createApplication({ company: 'Other Co', position: 'Designer', location: 'Cebu' });
+      await createApplication({
+        company: 'Infor',
+        position: 'Engineer',
+        location: 'Manila',
+        jobUrl: 'https://careers.example.com/jobs/infor',
+      });
+      await createApplication({
+        company: 'Other Co',
+        position: 'Designer',
+        location: 'Cebu',
+        jobUrl: 'https://careers.example.com/jobs/other',
+      });
 
       const response = await request(app.getHttpServer())
         .get('/applications')
@@ -307,9 +350,9 @@ describe('Applications (e2e)', () => {
     });
 
     it('sorts by the requested field and order', async () => {
-      await createApplication({ company: 'Charlie Co' });
-      await createApplication({ company: 'Alpha Co' });
-      await createApplication({ company: 'Bravo Co' });
+      await createApplication({ company: 'Charlie Co', jobUrl: 'https://careers.example.com/jobs/charlie' });
+      await createApplication({ company: 'Alpha Co', jobUrl: 'https://careers.example.com/jobs/alpha' });
+      await createApplication({ company: 'Bravo Co', jobUrl: 'https://careers.example.com/jobs/bravo' });
 
       const response = await request(app.getHttpServer())
         .get('/applications')

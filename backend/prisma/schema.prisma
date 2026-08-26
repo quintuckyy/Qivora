@@ -88,6 +88,10 @@ model JobApplication {
 
   matchedByEmails ProcessedEmail[]
 
+  // A NULL jobUrl (manually-entered applications) never collides with itself
+  // under Postgres unique-index semantics, so this only blocks true
+  // duplicates — the same job URL saved twice for the same user.
+  @@unique([userId, jobUrl])
   @@index([userId])
   @@index([status])
   @@index([resumeId])

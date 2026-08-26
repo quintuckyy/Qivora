@@ -1,28 +1,41 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { CreateApplicationDto } from './dto/create-application.dto';
 import { UpdateApplicationDto } from './dto/update-application.dto';
 import { QueryApplicationsDto } from './dto/query-applications.dto';
 import { ApplicationStatus } from '../generated/prisma/enums';
+import { Prisma } from '../generated/prisma/client';
 
 
 @Injectable()
 export class ApplicationsService {
   constructor(private readonly prisma: PrismaService) {}
 
+  /** The extension's client-side duplicate check (a GET right before this
+   * POST) is only advisory — it can't stop two saves for the same job from
+   * racing each other. The `@@unique([userId, jobUrl])` DB constraint is
+   * what actually enforces "no duplicates"; this just turns its violation
+   * into a clean 409 instead of a raw 500. */
   async create(userId: string, dto: CreateApplicationDto) {
-    return this.prisma.jobApplication.create({
-      data: {
-        company: dto.company,
-        position: dto.position,
-        status: dto.status,
-        salaryMin: dto.salaryMin,
-        salaryMax: dto.salaryMax,
-        location: dto.location,
-        jobUrl: dto.jobUrl,
-        userId,
-      },
-    });
+    try {
+      return await this.prisma.jobApplication.create({
+        data: {
+          company: dto.company,
+          position: dto.position,
+          status: dto.status,
+          salaryMin: dto.salaryMin,
+          salaryMax: dto.salaryMax,
+          location: dto.location,
+          jobUrl: dto.jobUrl,
+          userId,
+        },
+      });
+    } catch (err) {
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
+        throw new ConflictException('This job is already saved to your tracker.');
+      }
+      throw err;
+    }
   }
 
   /** Scoped to the caller so one user's saved jobs never leak into another's
