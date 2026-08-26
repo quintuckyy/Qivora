@@ -1,5 +1,10 @@
 import { getSession, clearSession, login, isSessionValid, type StoredUser } from '../services/auth-service';
-import { saveApplication, checkDuplicate, type ExistingApplicationSummary } from '../services/applications-service';
+import {
+  saveApplication,
+  checkDuplicate,
+  type ExistingApplicationSummary,
+  type CreatedApplication,
+} from '../services/applications-service';
 import { FRONTEND_URL } from '../services/config';
 import { ApiError } from '../services/api-client';
 import { emptyJob, type ExtractedJob } from '../platforms/types';
@@ -119,6 +124,28 @@ function renderLogin(error?: string) {
   });
 }
 
+function renderSaved(user: StoredUser, application: CreatedApplication) {
+  app.innerHTML = `
+    <div class="footer-row">
+      <p>Signed in as ${escapeHtml(user.email)}</p>
+      <button type="button" class="btn-link" id="logout-btn">Log out</button>
+    </div>
+    <div class="card">
+      <div class="banner banner-success">Applied successfully</div>
+      <div>
+        <p class="value">${escapeHtml(application.position)}</p>
+        <p class="value-sub">${escapeHtml(application.company)} · ${escapeHtml(application.status)}</p>
+      </div>
+      <a href="${escapeHtml(FRONTEND_URL)}/applications/${application.id}" target="_blank" rel="noreferrer">View in Job Tracker ↗</a>
+    </div>
+  `;
+
+  document.getElementById('logout-btn')!.addEventListener('click', async () => {
+    await clearSession();
+    await start();
+  });
+}
+
 function renderAlreadySaved(user: StoredUser, application: ExistingApplicationSummary) {
   const savedOn = new Date(application.createdAt).toLocaleDateString();
 
@@ -149,12 +176,11 @@ interface ReadyOptions {
   platform: string | null;
   job: ExtractedJob;
   saving?: boolean;
-  banner?: { type: 'error' | 'success'; text: string };
-  viewLink?: boolean;
+  errorText?: string;
 }
 
 function renderReady(opts: ReadyOptions) {
-  const { user, supported, platform, job, banner, saving, viewLink } = opts;
+  const { user, supported, platform, job, errorText, saving } = opts;
   const platformLabel = platform ? PLATFORM_LABELS[platform] ?? platform : null;
 
   app.innerHTML = `
@@ -167,8 +193,7 @@ function renderReady(opts: ReadyOptions) {
         ? `<div class="banner banner-info">Detected: ${escapeHtml(platformLabel)}</div>`
         : `<div class="banner">Open a LinkedIn, Indeed, or JobStreet job posting to auto-fill these fields — you can also fill them in by hand.</div>`
     }
-    ${banner ? `<div class="banner ${banner.type === 'error' ? 'banner-error' : 'banner-success'}">${escapeHtml(banner.text)}</div>` : ''}
-    ${viewLink ? `<p><a href="${escapeHtml(FRONTEND_URL)}/applications" target="_blank" rel="noreferrer">View in Job Tracker ↗</a></p>` : ''}
+    ${errorText ? `<div class="banner banner-error">${escapeHtml(errorText)}</div>` : ''}
     <form id="save-form" class="card">
       <label class="field">
         <span>Position</span>
@@ -186,6 +211,16 @@ function renderReady(opts: ReadyOptions) {
         <span>Job URL</span>
         <input id="field-jobUrl" type="url" value="${escapeHtml(job.jobUrl)}" />
       </label>
+      <div class="field-row">
+        <label class="field">
+          <span>Salary Min</span>
+          <input id="field-salaryMin" type="number" min="0" value="${job.salaryMin ?? ''}" />
+        </label>
+        <label class="field">
+          <span>Salary Max</span>
+          <input id="field-salaryMax" type="number" min="0" value="${job.salaryMax ?? ''}" />
+        </label>
+      </div>
       <button type="submit" class="btn btn-primary" id="save-btn" ${saving ? 'disabled' : ''}>
         ${saving ? 'Saving…' : 'Save to Job Tracker'}
       </button>
@@ -201,11 +236,16 @@ function renderReady(opts: ReadyOptions) {
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
 
+    const salaryMinRaw = (document.getElementById('field-salaryMin') as HTMLInputElement).value.trim();
+    const salaryMaxRaw = (document.getElementById('field-salaryMax') as HTMLInputElement).value.trim();
+
     const nextJob: ExtractedJob = {
       position: (document.getElementById('field-position') as HTMLInputElement).value.trim(),
       company: (document.getElementById('field-company') as HTMLInputElement).value.trim(),
       location: (document.getElementById('field-location') as HTMLInputElement).value.trim(),
       jobUrl: (document.getElementById('field-jobUrl') as HTMLInputElement).value.trim(),
+      salaryMin: salaryMinRaw ? Number(salaryMinRaw) : undefined,
+      salaryMax: salaryMaxRaw ? Number(salaryMaxRaw) : undefined,
     };
 
     renderReady({ user, supported, platform, job: nextJob, saving: true });
@@ -217,15 +257,8 @@ function renderReady(opts: ReadyOptions) {
     }
 
     try {
-      await saveApplication(nextJob, session.token);
-      renderReady({
-        user,
-        supported,
-        platform,
-        job: nextJob,
-        banner: { type: 'success', text: 'Saved to Job Tracker.' },
-        viewLink: true,
-      });
+      const created = await saveApplication(nextJob, session.token);
+      renderSaved(user, created);
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
         await clearSession();
@@ -233,7 +266,7 @@ function renderReady(opts: ReadyOptions) {
         return;
       }
       const message = err instanceof ApiError ? err.message : 'Unable to save this application.';
-      renderReady({ user, supported, platform, job: nextJob, banner: { type: 'error', text: message } });
+      renderReady({ user, supported, platform, job: nextJob, errorText: message });
     }
   });
 }

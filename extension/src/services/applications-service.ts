@@ -30,6 +30,8 @@ export async function saveApplication(job: ExtractedJob, token: string): Promise
       status: 'APPLIED',
       location: job.location || undefined,
       jobUrl: job.jobUrl || undefined,
+      salaryMin: job.salaryMin,
+      salaryMax: job.salaryMax,
     },
     token,
   );

@@ -27,6 +27,37 @@ interface JsonLdJobPosting {
     | { address?: { addressLocality?: string; addressRegion?: string; addressCountry?: string } }
     | { address?: { addressLocality?: string; addressRegion?: string; addressCountry?: string } }[];
   url?: string;
+  baseSalary?: {
+    value?: { value?: number; minValue?: number; maxValue?: number };
+  };
+}
+
+/** Numbers embedded in a salary string, comma-grouped and possibly prefixed
+ * with a currency symbol/code (e.g. "₱140,000 – ₱150,000 per month",
+ * "$50,000 - $70,000 a year", "SGD 4,500 a month" -> a single value repeated
+ * as both bounds). Callers scope this to text already known to be a salary
+ * (a dedicated DOM node or JSON-LD field), so no other digits are present. */
+export function parseSalaryRange(text: string): { salaryMin?: number; salaryMax?: number } {
+  const matches = cleanText(text).match(/\d[\d,]*(?:\.\d+)?/g);
+  if (!matches) return {};
+
+  const numbers = matches.map((m) => Number(m.replace(/,/g, ''))).filter((n) => Number.isFinite(n) && n > 0);
+  if (numbers.length === 0) return {};
+  if (numbers.length === 1) return { salaryMin: numbers[0], salaryMax: numbers[0] };
+
+  return { salaryMin: Math.min(numbers[0], numbers[1]), salaryMax: Math.max(numbers[0], numbers[1]) };
+}
+
+function extractSalaryFromJsonLdPosting(candidate: JsonLdJobPosting): { salaryMin?: number; salaryMax?: number } {
+  const value = candidate.baseSalary?.value;
+  if (!value) return {};
+  if (typeof value.minValue === 'number' || typeof value.maxValue === 'number') {
+    return { salaryMin: value.minValue, salaryMax: value.maxValue ?? value.minValue };
+  }
+  if (typeof value.value === 'number') {
+    return { salaryMin: value.value, salaryMax: value.value };
+  }
+  return {};
 }
 
 function isJobPosting(node: unknown): node is JsonLdJobPosting {
@@ -69,6 +100,7 @@ export function extractFromJsonLd(doc: Document): Partial<ExtractedJob> {
         company: cleanText(org?.name),
         location: formatAddress(location?.address),
         jobUrl: cleanText(candidate.url),
+        ...extractSalaryFromJsonLdPosting(candidate),
       };
     }
   }

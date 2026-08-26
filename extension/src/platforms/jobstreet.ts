@@ -1,5 +1,12 @@
 import type { PlatformExtractor } from './types';
-import { cleanText, firstMatch, hostnameMatches, extractFromJsonLd, resolveCanonicalOrCleanUrl } from './shared';
+import {
+  cleanText,
+  firstMatch,
+  hostnameMatches,
+  extractFromJsonLd,
+  resolveCanonicalOrCleanUrl,
+  parseSalaryRange,
+} from './shared';
 
 /** JobStreet operates one storefront per market on a different ccTLD; add
  * more here as needed (see extension/README.md for known limitations). */
@@ -11,6 +18,7 @@ const JOBSTREET_HOSTS = ['jobstreet.com', 'jobstreet.com.ph', 'jobstreet.com.sg'
 const TITLE_SELECTORS = ['[data-automation="job-detail-title"]'];
 const COMPANY_SELECTORS = ['[data-automation="advertiser-name"]'];
 const LOCATION_SELECTORS = ['[data-automation="job-detail-location"]'];
+const SALARY_SELECTORS = ['[data-automation="job-detail-salary"]'];
 
 /** The "/job/<id>/apply" flow (résumé selection, screening questions, …) is
  * a completely different page from the job posting itself — none of the
@@ -43,6 +51,7 @@ function extractFromDom(doc: Document) {
     position: firstMatch(doc, TITLE_SELECTORS) || applySummary.position,
     company: firstMatch(doc, COMPANY_SELECTORS) || applySummary.company,
     location: firstMatch(doc, LOCATION_SELECTORS),
+    ...parseSalaryRange(firstMatch(doc, SALARY_SELECTORS)),
   };
 }
 
@@ -108,6 +117,8 @@ export const jobStreetExtractor: PlatformExtractor = {
       company: jsonLd.company || dom.company || titleTag.company || '',
       location: jsonLd.location || dom.location || '',
       jobUrl: resolveJobUrl(doc, url),
+      salaryMin: jsonLd.salaryMin ?? dom.salaryMin,
+      salaryMax: jsonLd.salaryMax ?? dom.salaryMax,
     };
   },
 };

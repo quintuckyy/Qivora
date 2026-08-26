@@ -103,6 +103,19 @@ input:focus {
   box-shadow: 0 0 0 3px var(--primary-soft);
 }
 
+/* The native number-input spinner renders as a stark light-themed box that
+   clashes with this dark popup — drop it rather than try to reskin it. */
+input[type='number'] {
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+
+input[type='number']::-webkit-inner-spin-button,
+input[type='number']::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
 .btn {
   width: 100%;
   border: 1px solid transparent;
@@ -215,6 +228,16 @@ a {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+}
+
+.field-row {
+  display: flex;
+  gap: 0.6rem;
+}
+
+.field-row .field {
+  flex: 1;
+  min-width: 0;
 }
 
 .footer-row {

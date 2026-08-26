@@ -3,6 +3,8 @@ export interface ExtractedJob {
   company: string;
   location: string;
   jobUrl: string;
+  salaryMin?: number;
+  salaryMax?: number;
 }
 
 /**

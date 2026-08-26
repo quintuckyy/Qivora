@@ -7,6 +7,7 @@ import { findPlatformForUrl } from '../src/platforms';
 import { linkedInExtractor } from '../src/platforms/linkedin';
 import { indeedExtractor } from '../src/platforms/indeed';
 import { jobStreetExtractor } from '../src/platforms/jobstreet';
+import { parseSalaryRange } from '../src/platforms/shared';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const fixturesDir = join(__dirname, 'fixtures');
@@ -157,6 +158,8 @@ describe('jobstreet extractor', () => {
       company: 'Acme Robotics',
       location: 'Taguig, NCR, PH',
       jobUrl: 'https://www.jobstreet.com.ph/job/12345678',
+      salaryMin: 60000,
+      salaryMax: 80000,
     });
   });
 
@@ -204,6 +207,33 @@ describe('jobstreet extractor', () => {
     expect(job.company).toBe('HGS Offshore Staffing Solutions');
     expect(job.location).toBe('Metro Manila (Remote)');
     expect(job.jobUrl).toBe('https://ph.jobstreet.com/job/93959933');
+  });
+
+  it('parses a "X – Y per month" salary range from the data-automation salary node', () => {
+    const { doc, url } = loadFixture('jobstreet-salary.html', 'https://ph.jobstreet.com/job/855391');
+    const job = jobStreetExtractor.extract(doc, url);
+    expect(job.position).toBe('Senior Full Stack Developer - 855391');
+    expect(job.salaryMin).toBe(140000);
+    expect(job.salaryMax).toBe(150000);
+  });
+});
+
+describe('parseSalaryRange', () => {
+  it('parses a peso range with an en dash and a "per month" suffix', () => {
+    expect(parseSalaryRange('₱140,000 – ₱150,000 per month')).toEqual({ salaryMin: 140000, salaryMax: 150000 });
+  });
+
+  it('parses a dollar range with a plain hyphen', () => {
+    expect(parseSalaryRange('$50,000 - $70,000 a year')).toEqual({ salaryMin: 50000, salaryMax: 70000 });
+  });
+
+  it('treats a single figure as both min and max', () => {
+    expect(parseSalaryRange('SGD 4,500 a month')).toEqual({ salaryMin: 4500, salaryMax: 4500 });
+  });
+
+  it('returns nothing when no salary is present', () => {
+    expect(parseSalaryRange('')).toEqual({});
+    expect(parseSalaryRange('Competitive salary')).toEqual({});
   });
 });
 
