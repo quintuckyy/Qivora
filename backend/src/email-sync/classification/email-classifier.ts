@@ -5,6 +5,12 @@ import { normalizeEmailText } from './providers/shared';
 interface KeywordRule {
   pattern: RegExp;
   weight: number;
+  /** This rule alone can never make its type "win" — only corroborate a
+   * match that some other, non-weak rule already qualified. Needed for
+   * generic words that show up plenty in email that isn't a rejection at
+   * all (e.g. "Unfortunately, our office will be closed Friday" —
+   * "unfortunately" alone shouldn't tag an unrelated email as one). */
+  weak?: boolean;
 }
 
 /** Checked in this order — a message matching both a REJECTION signal and a
@@ -26,10 +32,27 @@ const TYPE_RULES: Record<Exclude<DetectedEmailType, 'OTHER'>, KeywordRule[]> = {
     { pattern: /\bdecided not to (?:move forward|proceed)\b/i, weight: 3 },
     { pattern: /\bposition has been filled\b/i, weight: 3 },
     { pattern: /\bmove forward with other candidates\b/i, weight: 3 },
+    { pattern: /\bdecided to (?:move forward|proceed) with other candidates\b/i, weight: 3 },
+    { pattern: /\bwill not proceed with your application\b/i, weight: 3 },
+    // A real JobStreet rejection template — "...is unlikely to progress
+    // further" / "it looks unlikely that your application will progress
+    // further" — distinct enough from every other phrase here that it
+    // needed its own rule; bounded gap between "unlikely" and "progress"
+    // covers both of that template's exact wordings without requiring
+    // strict adjacency.
+    { pattern: /\bunlikely\b[^.\n]{0,60}\bprogress\b/i, weight: 3 },
+    // No strict adjacency to "your application" — real sentences almost
+    // always have a position/company clause in between ("your application
+    // for X at Y was unsuccessful"), which an exact-phrase match would miss.
+    { pattern: /\b(?:was|has been|is) unsuccessful\b/i, weight: 3 },
     { pattern: /\bpursu(?:e|ing) other candidates\b/i, weight: 2 },
     { pattern: /\bnot (?:been )?selected\b/i, weight: 2 },
-    { pattern: /\bunfortunately\b/i, weight: 1 },
-    { pattern: /\bwish you (?:the )?(?:best|success)\b/i, weight: 1 },
+    // Generic enough to show up outside a rejection entirely (a closure
+    // notice, a "sorry for the delay" aside, a congratulatory "we wish you
+    // the best in your new role") — `weak` so either can only corroborate
+    // an already-qualifying hit above, never classify an email on its own.
+    { pattern: /\bunfortunately\b/i, weight: 1, weak: true },
+    { pattern: /\bwish you (?:the )?(?:best|success)\b/i, weight: 1, weak: true },
   ],
   OFFER: [
     { pattern: /\bpleased to offer\b/i, weight: 3 },
@@ -51,7 +74,12 @@ const TYPE_RULES: Record<Exclude<DetectedEmailType, 'OTHER'>, KeywordRule[]> = {
     { pattern: /\bbook a time\b/i, weight: 1 },
   ],
   ASSESSMENT: [
-    { pattern: /\bcoding challenge\b/i, weight: 3 },
+    // "Coding challenge" alone is generic — practice platforms (LeetCode,
+    // HackerRank) use the exact same phrase in routine marketing digests
+    // ("join the Daily Coding Challenge") that have nothing to do with any
+    // application. `weak` so it can only corroborate a genuine invite that
+    // already qualifies via a more specific phrase below.
+    { pattern: /\bcoding challenge\b/i, weight: 3, weak: true },
     { pattern: /\bcoding (?:test|assessment)\b/i, weight: 3 },
     { pattern: /\btake[- ]home (?:test|assignment|assessment)\b/i, weight: 3 },
     { pattern: /\btechnical (?:test|assessment)\b/i, weight: 3 },
@@ -71,21 +99,47 @@ const TYPE_RULES: Record<Exclude<DetectedEmailType, 'OTHER'>, KeywordRule[]> = {
   ],
 };
 
-function scoreType(rules: KeywordRule[], subject: string, body: string): number {
+/** Notification emails that mention an application only in passing while
+ * reporting on the *job listing's* lifecycle, not the applicant's status —
+ * e.g. JobStreet's "this job has expired" nudge. These would otherwise trip
+ * APPLICATION_RECEIVED's "you applied for" rule (the listing recaps the job
+ * you applied to) and generate a bogus "new application" suggestion for an
+ * application that already exists. Checked before scoring so they short-
+ * circuit straight to OTHER regardless of what else matches. */
+const NOISE_PATTERNS: RegExp[] = [
+  /\b(?:job|listing|posting) .{0,40}\bhas (?:now )?expired\b/i,
+  /\bno longer (?:taking|accepting) applications\b/i,
+];
+
+function isNoiseEmail(subject: string, body: string): boolean {
+  return NOISE_PATTERNS.some((pattern) => pattern.test(subject) || pattern.test(body));
+}
+
+function scoreType(rules: KeywordRule[], subject: string, body: string): { score: number; qualifies: boolean } {
   let score = 0;
+  let qualifies = false;
   for (const rule of rules) {
-    if (rule.pattern.test(subject)) score += rule.weight * 2;
-    else if (rule.pattern.test(body)) score += rule.weight;
+    const hitSubject = rule.pattern.test(subject);
+    const hitBody = !hitSubject && rule.pattern.test(body);
+    if (!hitSubject && !hitBody) continue;
+
+    score += hitSubject ? rule.weight * 2 : rule.weight;
+    if (!rule.weak) qualifies = true;
   }
-  return score;
+  return { score, qualifies };
 }
 
 function detectType(subject: string, body: string): { type: DetectedEmailType; confidence: number } {
+  if (isNoiseEmail(subject, body)) return { type: 'OTHER', confidence: 0 };
+
   let best: { type: DetectedEmailType; score: number } = { type: 'OTHER', score: 0 };
 
   for (const type of TYPE_PRIORITY) {
-    const score = scoreType(TYPE_RULES[type], subject, body);
-    if (score > best.score) best = { type, score };
+    const { score, qualifies } = scoreType(TYPE_RULES[type], subject, body);
+    // A type whose entire score comes from `weak` rules never wins — it can
+    // only ride along as corroboration once some other rule for that same
+    // type already qualified it.
+    if (qualifies && score > best.score) best = { type, score };
   }
 
   if (best.score === 0) return { type: 'OTHER', confidence: 0 };
