@@ -8,12 +8,14 @@ import { LoadingState } from '../components/LoadingState';
 import { ErrorState } from '../components/ErrorState';
 import { EmptyState } from '../components/EmptyState';
 import { StatusBadge } from '../components/StatusBadge';
+import { UndisclosedBadge } from '../components/UndisclosedBadge';
+import { ArrowRightIcon } from '../components/icons';
 
 const TYPE_LABELS: Record<DetectedEmailType, string> = {
   APPLICATION_RECEIVED: 'Application received',
   ASSESSMENT: 'Assessment invitation',
   INTERVIEW: 'Interview invitation',
-  REJECTION: 'Rejection',
+  REJECTION: 'Application Rejected',
   OFFER: 'Offer',
   OTHER: 'Other',
 };
@@ -84,46 +86,55 @@ function SuggestionCard({ suggestion, onResolved }: { suggestion: EmailSuggestio
     }
   }
 
+  const meta = [suggestion.extractedSource, suggestion.receivedAt ? new Date(suggestion.receivedAt).toLocaleDateString() : null]
+    .filter(Boolean)
+    .join(' • ');
+
   return (
     <div className="card suggestion-card">
-      <div className="card-header">
-        <span className={`status-badge ${TYPE_BADGE_CLASS[suggestion.detectedType]}`}>
-          {TYPE_LABELS[suggestion.detectedType]}
-        </span>
-        {suggestion.receivedAt && <span className="muted">{new Date(suggestion.receivedAt).toLocaleDateString()}</span>}
-      </div>
+      <span className={`status-badge ${TYPE_BADGE_CLASS[suggestion.detectedType]}`}>
+        {TYPE_LABELS[suggestion.detectedType]}
+      </span>
 
-      {suggestion.subject && <p><strong>{suggestion.subject}</strong></p>}
-      <p className="muted">
-        {suggestion.fromAddress}
-        {suggestion.extractedSource && <> · via {suggestion.extractedSource}</>}
-      </p>
-
-      {isCreate && (
-        <div className="field-row">
-          <label className="field">
-            <span>Company</span>
-            <input value={company} onChange={(event) => setCompany(event.target.value)} />
-          </label>
+      {isCreate ? (
+        <div className="field-row suggestion-edit">
           <label className="field">
             <span>Position</span>
             <input value={position} onChange={(event) => setPosition(event.target.value)} />
           </label>
+          <label className="field">
+            <span>Company</span>
+            <input value={company} onChange={(event) => setCompany(event.target.value)} />
+          </label>
+        </div>
+      ) : (
+        <div className="suggestion-heading">
+          <h3 className="suggestion-title">
+            {suggestion.extractedPosition ?? <UndisclosedBadge label="Position undisclosed" />}
+          </h3>
+          <p className="suggestion-company">
+            {suggestion.extractedCompany ?? <UndisclosedBadge label="Company undisclosed" />}
+          </p>
         </div>
       )}
 
+      {meta && <p className="suggestion-meta">{meta}</p>}
+
       {isUpdate && suggestion.matchedApplication && (
-        <p>
-          Will update <strong>{suggestion.matchedApplication.company}</strong> — {suggestion.matchedApplication.position}{' '}
-          from <StatusBadge status={suggestion.matchedApplication.status} /> to{' '}
-          <span className={`status-badge ${TYPE_BADGE_CLASS[suggestion.detectedType]}`}>
-            {TARGET_STATUS_LABEL[suggestion.detectedType]}
-          </span>
-        </p>
+        <dl className="suggestion-transition">
+          <dt>Status change</dt>
+          <dd>
+            <StatusBadge status={suggestion.matchedApplication.status} />
+            <ArrowRightIcon className="suggestion-transition-arrow" />
+            <span className={`status-badge ${TYPE_BADGE_CLASS[suggestion.detectedType]}`}>
+              {TARGET_STATUS_LABEL[suggestion.detectedType]}
+            </span>
+          </dd>
+        </dl>
       )}
 
       {isNone && (
-        <p className="muted">
+        <p className="muted suggestion-note">
           {suggestion.matchedApplication
             ? 'No status change needed — this application is already up to date.'
             : 'No matching application found. Dismiss this, or create it manually from the Applications page.'}
@@ -139,7 +150,13 @@ function SuggestionCard({ suggestion, onResolved }: { suggestion: EmailSuggestio
       <div className="status-update-row">
         {!isNone && (
           <button type="button" className="btn btn-primary" onClick={handleConfirm} disabled={confirming || dismissing}>
-            {confirming ? 'Confirming…' : 'Confirm'}
+            {isUpdate
+              ? confirming
+                ? 'Updating…'
+                : 'Confirm update'
+              : confirming
+                ? 'Creating…'
+                : 'Create application'}
           </button>
         )}
         <button type="button" className="btn btn-secondary" onClick={handleDismiss} disabled={confirming || dismissing}>
@@ -291,7 +308,7 @@ export function EmailSyncPage() {
               <button type="button" className="btn btn-primary" onClick={handleSync} disabled={syncing || inCooldown}>
                 {syncing ? 'Syncing…' : inCooldown ? 'Synced' : 'Sync Gmail'}
               </button>
-              <button type="button" className="btn btn-secondary" onClick={handleDisconnect} disabled={disconnecting}>
+              <button type="button" className="btn btn-danger-solid" onClick={handleDisconnect} disabled={disconnecting}>
                 {disconnecting ? 'Disconnecting…' : 'Disconnect'}
               </button>
             </div>

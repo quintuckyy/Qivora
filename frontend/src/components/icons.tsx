@@ -141,3 +141,46 @@ export function MailIcon(props: SVGProps<SVGSVGElement>) {
     </Icon>
   );
 }
+
+export function XIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Icon {...props}>
+      <path d="M6 6l12 12" />
+      <path d="M18 6L6 18" />
+    </Icon>
+  );
+}
+
+export function ChevronDownIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Icon {...props}>
+      <path d="M6 9l6 6 6-6" />
+    </Icon>
+  );
+}
+
+export function CheckIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Icon {...props}>
+      <path d="M5 12.5l4.5 4.5L19 7" />
+    </Icon>
+  );
+}
+
+export function ArrowRightIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Icon {...props}>
+      <path d="M4 12h16" />
+      <path d="M14 6l6 6-6 6" />
+    </Icon>
+  );
+}
+
+export function ArrowDownIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Icon {...props}>
+      <path d="M12 4v16" />
+      <path d="M6 14l6 6 6-6" />
+    </Icon>
+  );
+}

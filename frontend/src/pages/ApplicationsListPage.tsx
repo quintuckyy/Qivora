@@ -6,13 +6,21 @@ import { APPLICATION_STATUSES, type ApplicationStatus } from '../api/types';
 import { LoadingState } from '../components/LoadingState';
 import { ErrorState } from '../components/ErrorState';
 import { EmptyState } from '../components/EmptyState';
-import { StatusBadge } from '../components/StatusBadge';
+import { StatusBadge, STATUS_LABELS } from '../components/StatusBadge';
 import { Pagination } from '../components/Pagination';
-import { PlusIcon, SearchIcon } from '../components/icons';
+import { Dropdown, type DropdownOption } from '../components/Dropdown';
+import { SortDirectionToggle } from '../components/SortDirectionToggle';
+import { UndisclosedBadge } from '../components/UndisclosedBadge';
+import { PlusIcon, SearchIcon, XIcon } from '../components/icons';
 
 const PAGE_SIZE = 10;
 
-const SORT_OPTIONS: { value: string; label: string }[] = [
+const STATUS_OPTIONS: DropdownOption<ApplicationStatus | ''>[] = [
+  { value: '', label: 'All statuses' },
+  ...APPLICATION_STATUSES.map((s) => ({ value: s, label: STATUS_LABELS[s] })),
+];
+
+const SORT_OPTIONS: DropdownOption<string>[] = [
   { value: 'createdAt', label: 'Date added' },
   { value: 'updatedAt', label: 'Last updated' },
   { value: 'company', label: 'Company' },
@@ -69,7 +77,7 @@ export function ApplicationsListPage() {
 
       <div className="toolbar">
         <div className="toolbar-search-wrap">
-          <SearchIcon />
+          <SearchIcon className="toolbar-search-icon" />
           <input
             type="search"
             placeholder="Search company, position, or location…"
@@ -77,33 +85,31 @@ export function ApplicationsListPage() {
             onChange={(e) => setSearchInput(e.target.value)}
             className="toolbar-search"
           />
+          {searchInput && (
+            <button
+              type="button"
+              className="toolbar-search-clear"
+              onClick={() => setSearchInput('')}
+              aria-label="Clear search"
+              title="Clear search"
+            >
+              <XIcon />
+            </button>
+          )}
         </div>
 
-        <select value={status} onChange={(e) => setStatus(e.target.value as ApplicationStatus | '')}>
-          <option value="">All statuses</option>
-          {APPLICATION_STATUSES.map((s) => (
-            <option key={s} value={s}>
-              {s}
-            </option>
-          ))}
-        </select>
+        <div className="toolbar-filters">
+          <Dropdown
+            value={status}
+            options={STATUS_OPTIONS}
+            onChange={setStatus}
+            ariaLabel="Filter by status"
+          />
 
-        <select value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
-          {SORT_OPTIONS.map((option) => (
-            <option key={option.value} value={option.value}>
-              Sort: {option.label}
-            </option>
-          ))}
-        </select>
+          <Dropdown value={sortBy} options={SORT_OPTIONS} onChange={setSortBy} ariaLabel="Sort by" triggerPrefix="Sort: " />
 
-        <button
-          type="button"
-          className="btn btn-secondary"
-          onClick={() => setSortOrder((order) => (order === 'asc' ? 'desc' : 'asc'))}
-          title="Toggle sort direction"
-        >
-          {sortOrder === 'asc' ? '↑ Ascending' : '↓ Descending'}
-        </button>
+          <SortDirectionToggle order={sortOrder} onToggle={() => setSortOrder((order) => (order === 'asc' ? 'desc' : 'asc'))} />
+        </div>
       </div>
 
       {asyncStatus === 'loading' && <LoadingState label="Loading applications…" />}
@@ -155,8 +161,14 @@ export function ApplicationsListPage() {
                     <td>
                       <StatusBadge status={application.status} />
                     </td>
-                    <td>{application.location ?? '—'}</td>
-                    <td>{formatSalaryRange(application.salaryMin, application.salaryMax)}</td>
+                    <td>{application.location ?? <UndisclosedBadge />}</td>
+                    <td>
+                      {application.salaryMin == null && application.salaryMax == null ? (
+                        <UndisclosedBadge />
+                      ) : (
+                        formatSalaryRange(application.salaryMin, application.salaryMax)
+                      )}
+                    </td>
                     <td>{new Date(application.createdAt).toLocaleDateString()}</td>
                   </tr>
                 ))}
@@ -193,7 +205,6 @@ function SortableHeader({
 }
 
 function formatSalaryRange(min: number | null, max: number | null): string {
-  if (min == null && max == null) return '—';
   if (min != null && max != null) return `$${min.toLocaleString()} – $${max.toLocaleString()}`;
   return `$${(min ?? max)!.toLocaleString()}`;
 }

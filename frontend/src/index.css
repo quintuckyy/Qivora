@@ -31,6 +31,10 @@
   --color-danger: #f87171;
   --color-danger-hover: #fca5a5;
   --color-danger-soft: rgba(248, 113, 113, 0.14);
+  /* A more saturated red for solid-fill danger buttons (e.g. Disconnect) —
+   * --color-danger above is a softer/pastel red tuned for text and outline
+   * styles, too muted to read as "bright" filling a whole button. */
+  --color-danger-strong: #ef4444;
 
   --radius-sm: 10px;
   --radius: 14px;
@@ -448,14 +452,21 @@ a {
   transform: translateY(-1px);
 }
 
+/* Previously background: var(--color-surface-2) with the same border-strong
+ * — visually near-indistinguishable from the card it sits on (surface-2 is
+ * only marginally lighter than the card's own surface), which read as
+ * disabled rather than a real clickable action. Lifted the default fill to
+ * surface-hover (a clearer step up from the card) with an explicit, more
+ * visible border, and given hover its own distinct lighter step instead of
+ * reusing what used to be the resting state. */
 .btn-secondary {
-  background: var(--color-surface-2);
+  background: var(--color-surface-hover);
   color: var(--color-text);
-  border-color: var(--color-border-strong);
+  border: 1px solid var(--color-border-strong);
 }
 
 .btn-secondary:hover:not(:disabled) {
-  background: var(--color-surface-hover);
+  background: var(--color-border-strong);
   border-color: var(--color-primary-border);
 }
 
@@ -468,6 +479,18 @@ a {
 .btn-danger:hover:not(:disabled) {
   background: var(--color-danger-soft);
   color: var(--color-danger-hover);
+}
+
+.btn-danger-solid {
+  background:rgb(253, 63, 63);
+  color: var(--color-text);
+  box-shadow: 0 4px 14px -4px rgba(239, 68, 68, 0.55);
+}
+
+.btn-danger-solid:hover:not(:disabled) {
+  background: rgb(253, 21, 21);
+  box-shadow: 0 6px 18px -4px rgba(255, 43, 43, 0.7);
+  transform: translateY(-1px);
 }
 
 /* --- Forms --- */
@@ -936,29 +959,288 @@ textarea {
 
 .toolbar {
   display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+}
+
+.toolbar-search-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.toolbar-search-icon {
+  position: absolute;
+  left: 0.85rem;
+  color: var(--color-text-faint);
+  pointer-events: none;
+  transition: color 0.15s ease;
+}
+
+.toolbar-search-wrap:focus-within .toolbar-search-icon {
+  color: var(--color-primary);
+}
+
+.toolbar-search {
+  width: 100%;
+  padding: 0.65rem 2.5rem;
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.03), transparent 55%), var(--color-surface-2);
+  box-shadow: var(--shadow-sm);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+}
+
+.toolbar-search::placeholder {
+  color: var(--color-text-faint);
+}
+
+.toolbar-search:hover {
+  border-color: var(--color-primary-border);
+  background: var(--color-surface-hover);
+}
+
+.toolbar-search:focus {
+  border-color: var(--color-primary-border);
+  box-shadow: 0 0 0 3px var(--color-primary-soft), 0 0 20px -6px rgba(34, 211, 238, 0.5);
+}
+
+/* Suppress the native WebKit "clear" button — .toolbar-search-clear replaces
+   it with one styled to match the rest of the control. */
+.toolbar-search::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.toolbar-search-clear {
+  position: absolute;
+  right: 0.55rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--color-text-faint);
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.toolbar-search-clear svg {
+  width: 14px;
+  height: 14px;
+}
+
+.toolbar-search-clear:hover {
+  background: var(--color-surface-hover);
+  color: var(--color-text);
+}
+
+.toolbar-search-clear:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--color-primary-soft);
+  color: var(--color-primary);
+}
+
+/* Status filter, sort field, and sort direction — kept on one row, left
+   aligned, and sized to their own content rather than the generic
+   input/select `width: 100%` (which would force each onto its own line). */
+.toolbar-filters {
+  display: flex;
   flex-wrap: wrap;
   gap: 0.6rem;
   align-items: center;
 }
 
-.toolbar-search-wrap {
+/* --- Dropdown (custom status / sort select, matches card glass + glow) --- */
+
+.dropdown {
   position: relative;
-  flex: 1;
-  min-width: 220px;
+}
+
+.dropdown-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.65rem;
+  min-width: 180px;
+  padding: 0.6rem 0.8rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border-strong);
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.03), transparent 55%), var(--color-surface-2);
+  color: var(--color-text);
+  font: inherit;
+  font-size: 0.86rem;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+}
+
+.dropdown-trigger:hover {
+  border-color: var(--color-primary-border);
+  background: var(--color-surface-hover);
+}
+
+.dropdown-trigger:focus-visible,
+.dropdown-trigger.dropdown-trigger-open {
+  outline: none;
+  border-color: var(--color-primary-border);
+  box-shadow: 0 0 0 3px var(--color-primary-soft), 0 0 20px -6px rgba(34, 211, 238, 0.5);
+}
+
+.dropdown-trigger-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dropdown-trigger-prefix {
+  color: var(--color-text-muted);
+  font-weight: 500;
+}
+
+.dropdown-chevron {
+  flex-shrink: 0;
+  width: 15px;
+  height: 15px;
+  color: var(--color-text-faint);
+  transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1), color 0.15s ease;
+}
+
+.dropdown-trigger:hover .dropdown-chevron,
+.dropdown-trigger-open .dropdown-chevron {
+  color: var(--color-primary);
+}
+
+.dropdown-chevron-open {
+  transform: rotate(180deg);
+}
+
+.dropdown-menu {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  left: 0;
+  z-index: 30;
+  min-width: 100%;
+  max-height: 280px;
+  overflow-y: auto;
+  list-style: none;
+  margin: 0;
+  padding: 0.4rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--color-border-strong);
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.035), transparent 45%), var(--color-bg-elevated);
+  box-shadow: 0 0 0 1px rgba(34, 211, 238, 0.08), 0 20px 45px -14px rgba(2, 6, 16, 0.75),
+    0 0 30px -14px rgba(34, 211, 238, 0.3);
+  backdrop-filter: blur(16px);
+  animation: dropdown-in 0.14s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@keyframes dropdown-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.dropdown-option {
   display: flex;
   align-items: center;
-}
-
-.toolbar-search-wrap svg {
-  position: absolute;
-  left: 0.75rem;
-  color: var(--color-text-faint);
-  pointer-events: none;
-}
-
-.toolbar-search {
+  gap: 0.55rem;
   width: 100%;
-  padding-left: 2.25rem;
+  padding: 0.55rem 0.65rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--color-text-muted);
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 0.12s ease, color 0.12s ease, border-color 0.12s ease;
+}
+
+.dropdown-option + .dropdown-option {
+  margin-top: 0.15rem;
+}
+
+.dropdown-option:hover,
+.dropdown-option:focus-visible {
+  background: var(--color-surface-hover);
+  color: var(--color-text);
+  outline: none;
+}
+
+.dropdown-option-check {
+  flex-shrink: 0;
+  width: 14px;
+  height: 14px;
+  color: var(--color-primary);
+}
+
+.dropdown-option:not(.dropdown-option-selected) .dropdown-option-check {
+  visibility: hidden;
+}
+
+.dropdown-option-selected {
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+  border-color: var(--color-primary-border);
+  font-weight: 700;
+}
+
+.dropdown-option-selected:hover {
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+}
+
+/* --- Sort direction toggle (matches the dropdown triggers) --- */
+
+.sort-direction-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 0.9rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border-strong);
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.03), transparent 55%), var(--color-surface-2);
+  color: var(--color-text);
+  font: inherit;
+  font-size: 0.86rem;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease, color 0.15s ease;
+}
+
+.sort-direction-btn:hover {
+  border-color: var(--color-primary-border);
+  background: var(--color-surface-hover);
+  color: var(--color-primary);
+}
+
+.sort-direction-btn:focus-visible {
+  outline: none;
+  border-color: var(--color-primary-border);
+  box-shadow: 0 0 0 3px var(--color-primary-soft), 0 0 20px -6px rgba(34, 211, 238, 0.5);
+}
+
+.sort-direction-icon {
+  width: 15px;
+  height: 15px;
+  transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.sort-direction-btn[data-order='asc'] .sort-direction-icon {
+  transform: rotate(180deg);
 }
 
 .status-update-row {
@@ -1106,6 +1388,23 @@ textarea {
   border-color: rgba(248, 113, 113, 0.25);
 }
 
+/* A dashed, muted pill for "this field was left blank" — same pill shape as
+   a status badge so it reads as an indicator rather than a plain text value,
+   but deliberately colorless/dashed so it never looks like it's part of the
+   status vocabulary above. */
+.undisclosed-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.28rem 0.7rem;
+  border-radius: 999px;
+  font-size: 0.74rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: var(--color-text-faint);
+  background: transparent;
+  border: 1px dashed var(--color-border-strong);
+}
+
 /* --- Bar chart --- */
 
 .bar-chart {
@@ -1165,11 +1464,82 @@ textarea {
 .suggestion-card {
   display: flex;
   flex-direction: column;
-  gap: 0.6rem;
+  gap: 0.65rem;
 }
 
 .suggestion-card p {
   margin: 0;
+}
+
+/* .suggestion-card is a column flex container, so its children stretch to
+ * full width by default (flexbox's cross-axis stretch) — fine for block
+ * content, but it also stretched the badge (an inline-sized pill) into a
+ * full-width bar. Opt just the badge back out to its natural compact size. */
+.suggestion-card > .status-badge {
+  align-self: flex-start;
+}
+
+.suggestion-heading {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.suggestion-title {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.suggestion-company {
+  color: var(--color-text-muted);
+  font-weight: 500;
+}
+
+/* text-faint measures ~2.8–3.4:1 against these dark surfaces — below WCAG
+ * AA's 4.5:1 floor for small text. text-muted (~5.3–6.4:1) passes with
+ * room to spare while still reading as clearly secondary. */
+.suggestion-meta {
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+}
+
+/* A boxed callout — visually sets the status change apart as the one piece
+ * of information the card exists to communicate, rather than one more line
+ * of plain text among several. Reuses the same uppercase-label-over-value
+ * language as .detail-grid (ApplicationDetailPage) for the label itself. */
+.suggestion-transition {
+  margin: 0;
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 0.6rem 0.85rem;
+}
+
+.suggestion-transition dt {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-muted);
+  margin-bottom: 0.4rem;
+}
+
+.suggestion-transition dd {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.suggestion-transition-arrow {
+  flex-shrink: 0;
+  width: 15px;
+  height: 15px;
+  color: var(--color-text-muted);
+}
+
+.suggestion-note {
+  font-size: 0.88rem;
+  color: var(--color-text-muted);
 }
 
 .dashboard-grid {
