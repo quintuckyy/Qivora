@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, HttpException, HttpStatus, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { ApplicationsService } from '../applications/applications.service';
 import { ApplicationStatus } from '../generated/prisma/enums';
@@ -15,6 +15,21 @@ import { ConfirmSuggestionDto } from './dto/confirm-suggestion.dto';
 // capped per run so a single click can never scan an entire mailbox.
 const SYNC_WINDOW_DAYS = 30;
 const MAX_MESSAGES_PER_SYNC = 40;
+
+// The "Sync Gmail" button is manual, not a poll. At MAX_MESSAGES_PER_SYNC=40
+// per run the actual Gmail API cost is trivial, so this isn't really a quota
+// guard — it's just a short buffer against accidental double-clicks/spam,
+// since a sync run this soon after the last one would mostly just re-scan
+// messages already in processed_emails and find nothing new anyway.
+const SYNC_COOLDOWN_MS = 2 * 60 * 1000;
+
+function formatCooldown(totalSeconds: number): string {
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  if (minutes === 0) return `${seconds}s`;
+  if (seconds === 0) return `${minutes}m`;
+  return `${minutes}m ${seconds}s`;
+}
 
 @Injectable()
 export class EmailSyncService {
@@ -35,7 +50,31 @@ export class EmailSyncService {
       connected: connection !== null,
       email: connection?.email ?? null,
       lastSyncedAt: connection?.lastSyncedAt ?? null,
+      // Lets the frontend disable the Sync button and show a countdown up
+      // front, instead of only finding out the cooldown is active after a
+      // click fails.
+      nextSyncAvailableAt: connection?.lastSyncedAt
+        ? new Date(connection.lastSyncedAt.getTime() + SYNC_COOLDOWN_MS)
+        : null,
     };
+  }
+
+  /** Throws a 429 if the last sync was too recent. The frontend disables the
+   * button proactively using getStatus()'s nextSyncAvailableAt — this is the
+   * server-side backstop (multiple tabs, a stale page, a direct API call). */
+  private assertCooldownElapsed(lastSyncedAt: Date | null): void {
+    if (!lastSyncedAt) return;
+    const remainingMs = SYNC_COOLDOWN_MS - (Date.now() - lastSyncedAt.getTime());
+    if (remainingMs <= 0) return;
+
+    const remainingSeconds = Math.ceil(remainingMs / 1000);
+    throw new HttpException(
+      {
+        message: `Gmail was just synced. Please wait ${formatCooldown(remainingSeconds)} before syncing again.`,
+        retryAfterSeconds: remainingSeconds,
+      },
+      HttpStatus.TOO_MANY_REQUESTS,
+    );
   }
 
   async exchangeCode(userId: string, code: string) {
@@ -141,6 +180,12 @@ export class EmailSyncService {
    * left, and stores a review-queue row for every job-related email found —
    * nothing is created or changed on an application until the user confirms. */
   async sync(userId: string) {
+    const connection = await this.prisma.gmailConnection.findUnique({ where: { userId } });
+    if (!connection) {
+      throw new NotFoundException('Gmail is not connected.');
+    }
+    this.assertCooldownElapsed(connection.lastSyncedAt);
+
     const accessToken = await this.getValidAccessToken(userId);
 
     const candidates = await this.gmailApi.listMessageIds(accessToken, {
@@ -206,6 +251,7 @@ export class EmailSyncService {
           confidence: detected.confidence,
           extractedCompany: detected.company,
           extractedPosition: detected.position,
+          extractedDate: detected.applicationDate,
           extractedSource: detected.source,
           suggestedAction: match.suggestedAction,
           matchedApplicationId: match.matchedApplicationId,

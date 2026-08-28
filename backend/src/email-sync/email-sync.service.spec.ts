@@ -97,16 +97,18 @@ describe('EmailSyncService', () => {
         connected: false,
         email: null,
         lastSyncedAt: null,
+        nextSyncAvailableAt: null,
       });
     });
 
-    it('reports connected with the stored email and last sync time', async () => {
+    it('reports connected with the stored email, last sync time, and when the cooldown clears', async () => {
       const lastSyncedAt = new Date('2026-08-20T00:00:00.000Z');
       prisma.gmailConnection.findUnique.mockResolvedValue({ email: 'jordan@gmail.com', lastSyncedAt });
       await expect(service.getStatus(userId)).resolves.toEqual({
         connected: true,
         email: 'jordan@gmail.com',
         lastSyncedAt,
+        nextSyncAvailableAt: new Date(lastSyncedAt.getTime() + 2 * 60 * 1000),
       });
     });
   });
@@ -214,6 +216,43 @@ describe('EmailSyncService', () => {
     it('throws NotFoundException when Gmail is not connected', async () => {
       prisma.gmailConnection.findUnique.mockResolvedValue(null);
       await expect(service.sync(userId)).rejects.toThrow(NotFoundException);
+    });
+
+    it('rejects with 429 when synced too recently, before making any Gmail API calls', async () => {
+      connectedWith({ lastSyncedAt: new Date(Date.now() - 30 * 1000) }); // synced 30s ago, cooldown is 2 minutes
+
+      await expect(service.sync(userId)).rejects.toMatchObject({ status: 429 });
+      expect(gmailApi.listMessageIds).not.toHaveBeenCalled();
+    });
+
+    it('allows syncing again once the cooldown has elapsed', async () => {
+      connectedWith({ lastSyncedAt: new Date(Date.now() - 3 * 60 * 1000) }); // synced 3 minutes ago, cooldown is 2
+      gmailApi.listMessageIds.mockResolvedValue([]);
+      prisma.processedEmail.findMany.mockResolvedValue([]);
+      prisma.jobApplication.findMany.mockResolvedValue([]);
+      prisma.gmailConnection.update.mockResolvedValue({});
+
+      await expect(service.sync(userId)).resolves.toEqual({
+        scanned: 0,
+        newlyProcessed: 0,
+        suggestionsCreated: 0,
+        autoDismissed: 0,
+      });
+    });
+
+    it('allows syncing when there is no prior sync at all', async () => {
+      connectedWith({ lastSyncedAt: null });
+      gmailApi.listMessageIds.mockResolvedValue([]);
+      prisma.processedEmail.findMany.mockResolvedValue([]);
+      prisma.jobApplication.findMany.mockResolvedValue([]);
+      prisma.gmailConnection.update.mockResolvedValue({});
+
+      await expect(service.sync(userId)).resolves.toEqual({
+        scanned: 0,
+        newlyProcessed: 0,
+        suggestionsCreated: 0,
+        autoDismissed: 0,
+      });
     });
 
     it('skips messages already recorded in processed_emails (dedup)', async () => {

@@ -38,6 +38,17 @@ const TARGET_STATUS_LABEL: Record<DetectedEmailType, string> = {
   OTHER: '—',
 };
 
+// Mirrors formatCooldown() on the backend (email-sync.service.ts) — kept in
+// sync manually since there's no shared package between the two apps.
+function formatCooldown(ms: number): string {
+  const totalSeconds = Math.max(0, Math.ceil(ms / 1000));
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  if (minutes === 0) return `${seconds}s`;
+  if (seconds === 0) return `${minutes}m`;
+  return `${minutes}m ${seconds}s`;
+}
+
 function SuggestionCard({ suggestion, onResolved }: { suggestion: EmailSuggestion; onResolved: () => void }) {
   const [company, setCompany] = useState(suggestion.extractedCompany ?? '');
   const [position, setPosition] = useState(suggestion.extractedPosition ?? '');
@@ -162,6 +173,22 @@ export function EmailSyncPage() {
   const [syncError, setSyncError] = useState<string | null>(null);
   const [syncResult, setSyncResult] = useState<GmailSyncResult | null>(null);
 
+  // Ticks once a second only while a cooldown is actually counting down, so
+  // the "Sync available in ..." label and the button's disabled state stay
+  // live without polling the server.
+  const nextSyncAvailableAt =
+    status === 'success' && gmailStatus.connected && gmailStatus.nextSyncAvailableAt
+      ? new Date(gmailStatus.nextSyncAvailableAt).getTime()
+      : null;
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (!nextSyncAvailableAt || nextSyncAvailableAt <= Date.now()) return;
+    const interval = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(interval);
+  }, [nextSyncAvailableAt]);
+  const cooldownRemainingMs = nextSyncAvailableAt ? nextSyncAvailableAt - now : 0;
+  const inCooldown = cooldownRemainingMs > 0;
+
   // Google redirects back here with ?code=... after the user grants consent;
   // this page completes the OAuth exchange itself (see api/emailSync.ts) so
   // the backend never needs a browser-facing callback route of its own.
@@ -225,6 +252,7 @@ export function EmailSyncPage() {
       const result = await emailSyncApi.sync();
       setSyncResult(result);
       refetchSuggestions();
+      refetchStatus(); // picks up the new lastSyncedAt / nextSyncAvailableAt so the cooldown kicks in immediately
     } catch (err) {
       setSyncError(err instanceof ApiError ? err.message : 'Unable to sync Gmail right now.');
     } finally {
@@ -257,10 +285,11 @@ export function EmailSyncPage() {
             <p>
               Connected as <strong>{gmailStatus.email}</strong>
               {gmailStatus.lastSyncedAt && <> · Last synced {new Date(gmailStatus.lastSyncedAt).toLocaleString()}</>}
+              {inCooldown && <> · Sync available in {formatCooldown(cooldownRemainingMs)}</>}
             </p>
             <div className="status-update-row">
-              <button type="button" className="btn btn-primary" onClick={handleSync} disabled={syncing}>
-                {syncing ? 'Syncing…' : 'Sync Gmail'}
+              <button type="button" className="btn btn-primary" onClick={handleSync} disabled={syncing || inCooldown}>
+                {syncing ? 'Syncing…' : inCooldown ? 'Synced' : 'Sync Gmail'}
               </button>
               <button type="button" className="btn btn-secondary" onClick={handleDisconnect} disabled={disconnecting}>
                 {disconnecting ? 'Disconnecting…' : 'Disconnect'}

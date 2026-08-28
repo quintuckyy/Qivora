@@ -110,6 +110,7 @@ export interface GmailStatus {
   connected: boolean;
   email: string | null;
   lastSyncedAt: string | null;
+  nextSyncAvailableAt: string | null;
 }
 
 export interface GmailSyncResult {
