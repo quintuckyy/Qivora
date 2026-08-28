@@ -183,6 +183,13 @@ model GmailConnection {
 
   lastSyncedAt DateTime?
 
+  /** Set when Google's token refresh comes back `invalid_grant` — the
+   * refresh token was revoked or expired, so every future refresh attempt
+   * would fail identically until the user reconnects. The automatic sync job
+   * checks this before touching a connection so it doesn't keep retrying a
+   * call that can only ever fail; cleared on the next successful reconnect. */
+  needsReconnect Boolean @default(false)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

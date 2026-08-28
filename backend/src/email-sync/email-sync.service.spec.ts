@@ -2,7 +2,7 @@ import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { EmailSyncService } from './email-sync.service';
 import { PrismaService } from '../database/prisma.service';
 import { ApplicationsService } from '../applications/applications.service';
-import { GmailOAuthClient } from './gmail/gmail-oauth.client';
+import { GmailOAuthClient, GmailReauthRequiredError } from './gmail/gmail-oauth.client';
 import { GmailApiClient } from './gmail/gmail-api.client';
 import { ApplicationStatus } from '../generated/prisma/enums';
 import { encryptToken } from './encryption';
@@ -19,6 +19,7 @@ type PrismaMock = {
     create: jest.Mock;
     findFirst: jest.Mock;
     update: jest.Mock;
+    count: jest.Mock;
   };
   jobApplication: {
     findMany: jest.Mock;
@@ -28,7 +29,7 @@ type PrismaMock = {
 function createPrismaMock(): PrismaMock {
   return {
     gmailConnection: { findUnique: jest.fn(), upsert: jest.fn(), update: jest.fn(), delete: jest.fn() },
-    processedEmail: { findMany: jest.fn(), create: jest.fn(), findFirst: jest.fn(), update: jest.fn() },
+    processedEmail: { findMany: jest.fn(), create: jest.fn(), findFirst: jest.fn(), update: jest.fn(), count: jest.fn() },
     jobApplication: { findMany: jest.fn() },
   };
 }
@@ -133,6 +134,9 @@ describe('EmailSyncService', () => {
       const call = prisma.gmailConnection.upsert.mock.calls[0][0];
       expect(call.create.email).toBe('jordan@gmail.com');
       expect(call.create.refreshTokenEncrypted).not.toBe('refresh-1'); // stored encrypted, not raw
+      // A fresh connection is never flagged as needing reconnect.
+      expect(call.create.needsReconnect).toBe(false);
+      expect(call.update.needsReconnect).toBe(false);
     });
 
     it('keeps the existing refresh token when Google omits one on re-consent', async () => {
@@ -345,6 +349,134 @@ describe('EmailSyncService', () => {
           data: expect.objectContaining({ suggestedAction: 'UPDATE_STATUS', matchedApplicationId: 'app-1' }),
         }),
       );
+    });
+
+    it('rejects a concurrent sync() call for the same user with 429 while one is already running', async () => {
+      connectedWith();
+      gmailApi.listMessageIds.mockResolvedValue([]);
+      prisma.processedEmail.findMany.mockResolvedValue([]);
+      prisma.jobApplication.findMany.mockResolvedValue([]);
+      prisma.gmailConnection.update.mockResolvedValue({});
+
+      const [first, second] = await Promise.allSettled([service.sync(userId), service.sync(userId)]);
+
+      expect(first.status).toBe('fulfilled');
+      expect(second.status).toBe('rejected');
+      if (second.status === 'rejected') {
+        expect(second.reason).toMatchObject({ status: 429 });
+      }
+      // Only one pass actually ran — listMessageIds was not called twice.
+      expect(gmailApi.listMessageIds).toHaveBeenCalledTimes(1);
+    });
+
+    it('releases the lock after a run so a later sync() call is not permanently blocked', async () => {
+      connectedWith();
+      gmailApi.listMessageIds.mockResolvedValue([]);
+      prisma.processedEmail.findMany.mockResolvedValue([]);
+      prisma.jobApplication.findMany.mockResolvedValue([]);
+      prisma.gmailConnection.update.mockResolvedValue({});
+
+      await service.sync(userId);
+      connectedWith({ lastSyncedAt: new Date(Date.now() - 3 * 60 * 1000) }); // clear cooldown for the 2nd call
+
+      await expect(service.sync(userId)).resolves.toEqual({
+        scanned: 0,
+        newlyProcessed: 0,
+        suggestionsCreated: 0,
+        autoDismissed: 0,
+      });
+    });
+
+    // Regression: a revoked/expired refresh token must mark the connection
+    // so the automatic sync job stops retrying it, and still surface as an
+    // error to a user who clicks "Sync Gmail" manually.
+    it('marks the connection needing reconnect when the refresh token was revoked', async () => {
+      connectedWith({ tokenExpiresAt: new Date(Date.now() - 1000) });
+      oauthClient.refreshAccessToken.mockRejectedValue(new GmailReauthRequiredError());
+      prisma.gmailConnection.update.mockResolvedValue({});
+
+      await expect(service.sync(userId)).rejects.toThrow(GmailReauthRequiredError);
+
+      expect(prisma.gmailConnection.update).toHaveBeenCalledWith({
+        where: { userId },
+        data: { needsReconnect: true },
+      });
+    });
+  });
+
+  describe('autoSyncUser', () => {
+    function connectedWith(overrides: Record<string, unknown> = {}) {
+      prisma.gmailConnection.findUnique.mockResolvedValue({
+        accessTokenEncrypted: encryptToken('valid-access-token'),
+        refreshTokenEncrypted: encryptToken('refresh-token'),
+        tokenExpiresAt: new Date(Date.now() + 60 * 60 * 1000),
+        ...overrides,
+      });
+    }
+
+    it('syncs a user regardless of how recently they were last synced (no manual cooldown)', async () => {
+      connectedWith({ lastSyncedAt: new Date() }); // synced seconds ago — would 429 via sync()
+      gmailApi.listMessageIds.mockResolvedValue([]);
+      prisma.processedEmail.findMany.mockResolvedValue([]);
+      prisma.jobApplication.findMany.mockResolvedValue([]);
+      prisma.gmailConnection.update.mockResolvedValue({});
+
+      await expect(service.autoSyncUser(userId)).resolves.toEqual({
+        userId,
+        status: 'synced',
+        scanned: 0,
+        newlyProcessed: 0,
+        suggestionsCreated: 0,
+        autoDismissed: 0,
+      });
+    });
+
+    it('reports reauth_required and marks the connection instead of throwing', async () => {
+      connectedWith({ tokenExpiresAt: new Date(Date.now() - 1000) });
+      oauthClient.refreshAccessToken.mockRejectedValue(new GmailReauthRequiredError());
+      prisma.gmailConnection.update.mockResolvedValue({});
+
+      await expect(service.autoSyncUser(userId)).resolves.toEqual({ userId, status: 'reauth_required' });
+      expect(prisma.gmailConnection.update).toHaveBeenCalledWith({
+        where: { userId },
+        data: { needsReconnect: true },
+      });
+    });
+
+    it('reports skipped, not an error, when a sync is already running for the user', async () => {
+      connectedWith();
+      gmailApi.listMessageIds.mockResolvedValue([]);
+      prisma.processedEmail.findMany.mockResolvedValue([]);
+      prisma.jobApplication.findMany.mockResolvedValue([]);
+      prisma.gmailConnection.update.mockResolvedValue({});
+
+      const [first, second] = await Promise.all([service.autoSyncUser(userId), service.autoSyncUser(userId)]);
+
+      const statuses = [first.status, second.status].sort();
+      expect(statuses).toEqual(['skipped', 'synced']);
+    });
+
+    it('propagates an unexpected error so the caller can log it', async () => {
+      connectedWith();
+      gmailApi.listMessageIds.mockRejectedValue(new Error('Gmail API is down'));
+      prisma.processedEmail.findMany.mockResolvedValue([]);
+      prisma.jobApplication.findMany.mockResolvedValue([]);
+
+      await expect(service.autoSyncUser(userId)).rejects.toThrow('Gmail API is down');
+    });
+  });
+
+  describe('getPendingCount', () => {
+    it('counts only this user\'s pending suggestions', async () => {
+      prisma.processedEmail.count.mockResolvedValue(3);
+
+      await expect(service.getPendingCount(userId)).resolves.toEqual({ count: 3 });
+      expect(prisma.processedEmail.count).toHaveBeenCalledWith({ where: { userId, status: 'PENDING' } });
+    });
+
+    it('returns zero when there is nothing pending', async () => {
+      prisma.processedEmail.count.mockResolvedValue(0);
+      await expect(service.getPendingCount(userId)).resolves.toEqual({ count: 0 });
     });
   });
 

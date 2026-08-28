@@ -54,6 +54,12 @@ export class EmailSyncController {
     return this.emailSyncService.listSuggestions(user.sub);
   }
 
+  @ApiOperation({ summary: 'Get the count of pending suggestions awaiting review' })
+  @Get('pending-count')
+  getPendingCount(@CurrentUser() user: JwtUser) {
+    return this.emailSyncService.getPendingCount(user.sub);
+  }
+
   @ApiOperation({ summary: 'Confirm a suggestion — creates or updates the matched application' })
   @Post('suggestions/:id/confirm')
   confirmSuggestion(

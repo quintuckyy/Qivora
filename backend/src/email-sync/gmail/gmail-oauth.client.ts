@@ -1,4 +1,4 @@
-import { Injectable, InternalServerErrorException } from '@nestjs/common';
+import { Injectable, InternalServerErrorException, UnauthorizedException } from '@nestjs/common';
 
 const GOOGLE_AUTH_URL = 'https://accounts.google.com/o/oauth2/v2/auth';
 const GOOGLE_TOKEN_URL = 'https://oauth2.googleapis.com/token';
@@ -14,6 +14,17 @@ export const GMAIL_SCOPES = [
   'https://www.googleapis.com/auth/userinfo.email',
   'openid',
 ].join(' ');
+
+/** Thrown specifically when Google's token endpoint returns `invalid_grant`
+ * on a refresh attempt — the refresh token has been revoked (user removed
+ * app access) or expired, and no amount of retrying will ever succeed until
+ * the user goes through the OAuth consent flow again. Callers use this to
+ * tell "reconnect required" apart from a transient failure worth retrying. */
+export class GmailReauthRequiredError extends UnauthorizedException {
+  constructor() {
+    super('Gmail access was revoked or expired. Please reconnect Gmail.');
+  }
+}
 
 export interface GoogleTokenResponse {
   access_token: string;
@@ -94,6 +105,13 @@ export class GmailOAuthClient {
     });
 
     if (!response.ok) {
+      // Google reports a revoked/expired refresh token as a 400 with
+      // error: "invalid_grant" — distinct from a transient outage, which
+      // just means "try again next sync" rather than "stop and reconnect".
+      const body = (await response.json().catch(() => null)) as { error?: string } | null;
+      if (body?.error === 'invalid_grant') {
+        throw new GmailReauthRequiredError();
+      }
       throw new InternalServerErrorException('Failed to refresh the Gmail access token. Please reconnect Gmail.');
     }
 

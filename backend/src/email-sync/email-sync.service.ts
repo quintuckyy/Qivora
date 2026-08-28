@@ -3,7 +3,7 @@ import { PrismaService } from '../database/prisma.service';
 import { ApplicationsService } from '../applications/applications.service';
 import { ApplicationStatus } from '../generated/prisma/enums';
 import type { DetectedEmailType, SuggestionStatus } from '../generated/prisma/enums';
-import { GmailOAuthClient } from './gmail/gmail-oauth.client';
+import { GmailOAuthClient, GmailReauthRequiredError } from './gmail/gmail-oauth.client';
 import { GmailApiClient } from './gmail/gmail-api.client';
 import { parseGmailMessage } from './gmail/gmail-message.parser';
 import { classifyEmail } from './classification/email-classifier';
@@ -31,14 +31,43 @@ function formatCooldown(totalSeconds: number): string {
   return `${minutes}m ${seconds}s`;
 }
 
+export interface SyncResult {
+  scanned: number;
+  newlyProcessed: number;
+  suggestionsCreated: number;
+  autoDismissed: number;
+}
+
+export type AutoSyncResult =
+  | ({ userId: string; status: 'synced' } & SyncResult)
+  | { userId: string; status: 'reauth_required' }
+  | { userId: string; status: 'skipped'; reason: string };
+
 @Injectable()
 export class EmailSyncService {
+  // In-process per-user lock so a manual "Sync Gmail" click and the
+  // automatic sync job (or two automatic ticks) can never run concurrently
+  // for the same account. A plain in-memory Set is enough because the
+  // backend only ever runs as a single instance — no cross-process
+  // coordination is needed for this.
+  private readonly syncLocks = new Set<string>();
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly applicationsService: ApplicationsService,
     private readonly oauthClient: GmailOAuthClient,
     private readonly gmailApi: GmailApiClient,
   ) {}
+
+  private acquireSyncLock(userId: string): boolean {
+    if (this.syncLocks.has(userId)) return false;
+    this.syncLocks.add(userId);
+    return true;
+  }
+
+  private releaseSyncLock(userId: string): void {
+    this.syncLocks.delete(userId);
+  }
 
   getAuthUrl() {
     return { url: this.oauthClient.buildAuthUrl() };
@@ -105,6 +134,7 @@ export class EmailSyncService {
         refreshTokenEncrypted,
         tokenExpiresAt: new Date(Date.now() + tokens.expires_in * 1000),
         scope: tokens.scope,
+        needsReconnect: false,
       },
       update: {
         email,
@@ -112,6 +142,7 @@ export class EmailSyncService {
         refreshTokenEncrypted,
         tokenExpiresAt: new Date(Date.now() + tokens.expires_in * 1000),
         scope: tokens.scope,
+        needsReconnect: false,
       },
     });
 
@@ -174,18 +205,68 @@ export class EmailSyncService {
     return `newer_than:${SYNC_WINDOW_DAYS}d -in:chats -in:spam -in:trash -category:promotions -category:social (${keywords.join(' OR ')})`;
   }
 
-  /** The manual "Sync Gmail" button. Scans recent candidate messages (bounded
-   * by SYNC_WINDOW_DAYS / MAX_MESSAGES_PER_SYNC), skips anything already in
-   * processed_emails (the dedup ledger), classifies and matches whatever's
-   * left, and stores a review-queue row for every job-related email found —
-   * nothing is created or changed on an application until the user confirms. */
-  async sync(userId: string) {
+  /** The manual "Sync Gmail" button. Validates the connection, cooldown, and
+   * per-user lock, then delegates the actual scan to performSync() — the
+   * same core logic the automatic sync job reuses. */
+  async sync(userId: string): Promise<SyncResult> {
     const connection = await this.prisma.gmailConnection.findUnique({ where: { userId } });
     if (!connection) {
       throw new NotFoundException('Gmail is not connected.');
     }
     this.assertCooldownElapsed(connection.lastSyncedAt);
 
+    if (!this.acquireSyncLock(userId)) {
+      throw new HttpException(
+        'A Gmail sync is already running for this account. Please wait for it to finish.',
+        HttpStatus.TOO_MANY_REQUESTS,
+      );
+    }
+
+    try {
+      return await this.performSync(userId);
+    } catch (error) {
+      if (error instanceof GmailReauthRequiredError) {
+        await this.prisma.gmailConnection.update({ where: { userId }, data: { needsReconnect: true } });
+      }
+      throw error;
+    } finally {
+      this.releaseSyncLock(userId);
+    }
+  }
+
+  /** Runs one sync pass for a user whose Gmail is already known to be
+   * connected — called by the automatic sync job. Unlike sync(), this never
+   * throws for expected conditions (already syncing, reauth needed); it
+   * reports them in the result so a scheduler processing many users can
+   * carry on to the next one without a try/catch per user for the common
+   * cases. Any other, unexpected failure still throws for the caller to log. */
+  async autoSyncUser(userId: string): Promise<AutoSyncResult> {
+    if (!this.acquireSyncLock(userId)) {
+      return { userId, status: 'skipped', reason: 'a sync is already running for this account' };
+    }
+
+    try {
+      const result = await this.performSync(userId);
+      return { userId, status: 'synced', ...result };
+    } catch (error) {
+      if (error instanceof GmailReauthRequiredError) {
+        await this.prisma.gmailConnection.update({ where: { userId }, data: { needsReconnect: true } });
+        return { userId, status: 'reauth_required' };
+      }
+      throw error;
+    } finally {
+      this.releaseSyncLock(userId);
+    }
+  }
+
+  /** Core scan shared by the manual "Sync Gmail" button and the automatic
+   * sync job. Scans recent candidate messages (bounded by SYNC_WINDOW_DAYS /
+   * MAX_MESSAGES_PER_SYNC), skips anything already in processed_emails (the
+   * dedup ledger), classifies and matches whatever's left, and stores a
+   * review-queue row for every job-related email found — nothing is created
+   * or changed on an application until the user confirms. Callers are
+   * responsible for the per-user lock and any cooldown check. */
+  private async performSync(userId: string): Promise<SyncResult> {
     const accessToken = await this.getValidAccessToken(userId);
 
     const candidates = await this.gmailApi.listMessageIds(accessToken, {
@@ -284,6 +365,15 @@ export class EmailSyncService {
         },
       },
     });
+  }
+
+  /** Powers the sidebar's unread badge — a cheap count rather than the full
+   * listSuggestions() payload, since the badge only ever needs the number. */
+  async getPendingCount(userId: string): Promise<{ count: number }> {
+    const count = await this.prisma.processedEmail.count({
+      where: { userId, status: 'PENDING' as SuggestionStatus },
+    });
+    return { count };
   }
 
   async confirmSuggestion(userId: string, id: string, dto: ConfirmSuggestionDto) {
