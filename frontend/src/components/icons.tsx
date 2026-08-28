@@ -184,3 +184,32 @@ export function ArrowDownIcon(props: SVGProps<SVGSVGElement>) {
     </Icon>
   );
 }
+
+/** Alphabetical-sort-ascending glyph — "A" over "Z" beside a down arrow — so
+ * the icon itself reads as "A to Z" rather than relying on a bare arrow's
+ * rotation, which flips illegibly when it has to represent letter order. */
+export function ArrowDownAZIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Icon {...props}>
+      <path d="M4 11l3-8 3 8" />
+      <path d="M5.2 8h3.6" />
+      <path d="M4 13h6l-6 8h6" />
+      <path d="M18 3v18" />
+      <path d="M14 17l4 4 4-4" />
+    </Icon>
+  );
+}
+
+/** Alphabetical-sort-descending glyph — "Z" over "A" beside an up arrow —
+ * the mirror of ArrowDownAZIcon for "Z to A" order. */
+export function ArrowUpZAIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Icon {...props}>
+      <path d="M4 3h6l-6 8h6" />
+      <path d="M4 21l3-8 3 8" />
+      <path d="M5.2 18h3.6" />
+      <path d="M18 3v18" />
+      <path d="M14 7l4-4 4 4" />
+    </Icon>
+  );
+}

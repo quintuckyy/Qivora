@@ -20,6 +20,8 @@ export const emailSyncApi = {
 
   listSuggestions: () => api.get<EmailSuggestion[]>('/email-sync/suggestions'),
 
+  getPendingCount: () => api.get<{ count: number }>('/email-sync/pending-count'),
+
   confirmSuggestion: (id: string, overrides: SuggestionOverrides = {}) =>
     api.post<EmailSuggestion>(`/email-sync/suggestions/${id}/confirm`, overrides),
 
