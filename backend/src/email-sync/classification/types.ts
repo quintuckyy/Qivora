@@ -22,4 +22,8 @@ export interface ExtractedEmailInfo {
   company: string | null;
   position: string | null;
   source: string | null;
+  /** When the email itself states an explicit date ("...on August 20,
+   * 2026"). Never guessed from the received timestamp — callers that want a
+   * fallback should use the message's own receivedAt for that. */
+  applicationDate: Date | null;
 }

@@ -68,6 +68,43 @@ describe('parseGmailMessage', () => {
     expect(parsed.bodyText).not.toContain('<div>');
   });
 
+  // Regression: a real LinkedIn confirmation email's plain-text part came
+  // through as literal "=E2=80=93" (should decode to an en dash) and
+  // "=3D" (should decode to "="), with soft line-wraps ("=\n") splitting
+  // words mid-string — because the Gmail API hands back a part's raw
+  // bytes as-is, still quoted-printable encoded, and nothing was undoing
+  // that encoding before classification ran on it.
+  it('decodes a quoted-printable text/plain body', () => {
+    const message: GmailMessage = {
+      id: 'msg-5',
+      threadId: 'thread-5',
+      payload: {
+        // Content-Transfer-Encoding is MIME-part metadata (Gmail reports
+        // it per-part, alongside the mail headers like Subject) — not a
+        // separate mechanism, just another header on this same part.
+        headers: [
+          { name: 'Subject', value: 'Your application was sent to Aventis Technology' },
+          { name: 'Content-Transfer-Encoding', value: 'quoted-printable' },
+        ],
+        mimeType: 'text/plain',
+        body: {
+          data: toBase64Url(
+            'Associate =E2=80=93 CVM Support & Development\nAventis Technology\nPasig\n' +
+              'View job: https://www.linkedin.com/comm/jobs/view/4457452940/?trackingId=3D=\nCM6EO0Z',
+          ),
+        },
+      },
+    };
+
+    const parsed = parseGmailMessage(message);
+
+    expect(parsed.bodyText).toContain('Associate – CVM Support & Development');
+    expect(parsed.bodyText).toContain('Aventis Technology');
+    // The soft line-wrap ("=\n") is removed, so the URL is rejoined
+    // instead of being split mid-string.
+    expect(parsed.bodyText).toContain('trackingId=CM6EO0Z');
+  });
+
   it('returns empty strings and a null date instead of throwing when payload is missing', () => {
     const message: GmailMessage = { id: 'msg-4', threadId: 'thread-4' };
     const parsed = parseGmailMessage(message);

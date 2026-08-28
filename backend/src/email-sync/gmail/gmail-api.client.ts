@@ -9,6 +9,12 @@ export interface GmailMessageHeader {
 
 export interface GmailMessagePart {
   mimeType?: string;
+  /** Per-part headers — distinct from the top-level message's headers.
+   * What we actually need this for: Content-Transfer-Encoding, since the
+   * Gmail API does not undo quoted-printable or other transfer encodings
+   * for you — `body.data` is the raw part bytes, base64url-wrapped for
+   * JSON transport, nothing more. */
+  headers?: GmailMessageHeader[];
   body?: { data?: string; size?: number };
   parts?: GmailMessagePart[];
 }
@@ -17,7 +23,7 @@ export interface GmailMessage {
   id: string;
   threadId: string;
   internalDate?: string;
-  payload?: GmailMessagePart & { headers?: GmailMessageHeader[] };
+  payload?: GmailMessagePart;
 }
 
 async function gmailFetch(accessToken: string, path: string): Promise<Response> {

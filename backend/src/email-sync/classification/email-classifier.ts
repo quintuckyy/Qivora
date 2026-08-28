@@ -1,4 +1,6 @@
 import type { DetectedEmailType, EmailInput, ExtractedEmailInfo } from './types';
+import { resolveProvider, genericProvider } from './providers';
+import { normalizeEmailText } from './providers/shared';
 
 interface KeywordRule {
   pattern: RegExp;
@@ -63,6 +65,8 @@ const TYPE_RULES: Record<Exclude<DetectedEmailType, 'OTHER'>, KeywordRule[]> = {
     { pattern: /\bthank you for applying\b/i, weight: 2 },
     { pattern: /\bwe(?:'ve| have) received your application\b/i, weight: 2 },
     { pattern: /\bsuccessfully submitted\b/i, weight: 2 },
+    { pattern: /\byour application (?:was|has been) (?:sent|submitted)\b/i, weight: 2 },
+    { pattern: /\byou applied (?:for|to)\b/i, weight: 2 },
     { pattern: /\byour application (?:to|for)\b/i, weight: 1 },
   ],
 };
@@ -91,46 +95,18 @@ function detectType(subject: string, body: string): { type: DetectedEmailType; c
   return { type: best.type, confidence: Math.min(0.95, 0.4 + best.score * 0.06) };
 }
 
-/** Tried in order; the first that matches both fields wins. Real ATS emails
- * overwhelmingly follow a "<position> position/role at <company>" template,
- * so these cover the common phrasings without needing a full NLP pass —
- * anything they miss is still surfaced for review with blank fields the
- * user fills in by hand. */
-const POSITION_AND_COMPANY_PATTERNS: RegExp[] = [
-  /(?:for|to|of) the ([\w][\w &/.,'()-]{1,70}?) (?:position|role) at ([A-Z][\w&.,' -]{1,60}?)(?=[.,!\n]|\s+(?:has|have|is|was)\b|$)/i,
-  /position of ([\w][\w &/.,'()-]{1,70}?) at ([A-Z][\w&.,' -]{1,60}?)(?=[.,!\n]|$)/i,
-  /\bfor\s+([A-Z][\w &/.,'()-]{1,70}?)\s+at\s+([A-Z][\w&.,' -]{1,60}?)(?=[.,!\n:]|$)/i,
-  /([A-Z][\w][\w &/.,'()-]{1,70}?)\s+at\s+([A-Z][\w&.,' -]{1,60}?)(?=[.,!\n:]|$)/,
-];
-
-const COMPANY_ONLY_PATTERNS: RegExp[] = [
-  /thank you for (?:your interest in|applying to)\s+([A-Z][\w&.,' -]{1,60}?)(?=[.,!\n]|$)/i,
-  /application (?:to|for)\s+([A-Z][\w&.,' -]{1,60}?)(?=\s+has\b|[.,!\n]|$)/i,
-  /welcome to ([A-Z][\w&.,' -]{1,60}?)(?:['’]s)?\s+(?:hiring|recruiting|application) process/i,
-];
-
-function cleanCapture(value: string): string {
-  return value.trim().replace(/[,.]$/, '').trim();
-}
-
-function extractFromText(text: string): { position: string | null; company: string | null } {
-  for (const pattern of POSITION_AND_COMPANY_PATTERNS) {
-    const match = text.match(pattern);
-    if (match) return { position: cleanCapture(match[1]), company: cleanCapture(match[2]) };
-  }
-  for (const pattern of COMPANY_ONLY_PATTERNS) {
-    const match = text.match(pattern);
-    if (match) return { position: null, company: cleanCapture(match[1]) };
-  }
-  return { position: null, company: null };
-}
-
 /** From-header display name as a last resort company hint, e.g.
  * '"Acme Robotics Recruiting" <careers@acmerobotics.com>' -> "Acme Robotics".
- * Only used when no company was found in the subject/body text. */
+ * Only used when no provider (platform-specific or generic) found a
+ * company in the subject/body text. A bare address with no "Name <addr>"
+ * structure has no display name to fall back to — treating the raw email
+ * address itself as a "company" would be a guess, not an extraction, so
+ * this returns null rather than doing that. */
 function companyFromDisplayName(from: string): string | null {
-  const match = from.match(/^"?([^"<]+)"?\s*</);
-  const raw = (match ? match[1] : from.split('<')[0]).trim();
+  const match = from.match(/^"?([^"<]+)"?\s*<[^>]+>/);
+  if (!match) return null;
+
+  const raw = match[1].trim();
   if (!raw) return null;
 
   const cleaned = raw.replace(
@@ -151,8 +127,6 @@ const KNOWN_ATS_DOMAINS: Record<string, string> = {
   'ashbyhq.com': 'Ashby',
   'taleo.net': 'Taleo',
   'successfactors.com': 'SuccessFactors',
-  'linkedin.com': 'LinkedIn',
-  'indeed.com': 'Indeed',
   'jobvite.com': 'Jobvite',
   'breezy.hr': 'Breezy HR',
   'workable.com': 'Workable',
@@ -170,18 +144,30 @@ function detectSource(from: string): string | null {
 }
 
 export function classifyEmail(input: EmailInput): ExtractedEmailInfo {
-  const { subject, bodyText, from } = input;
+  const subject = normalizeEmailText(input.subject);
+  const bodyText = normalizeEmailText(input.bodyText);
+  const { from } = input;
+
   const { type, confidence } = detectType(subject, bodyText);
 
   if (type === 'OTHER') {
-    return { type, confidence, company: null, position: null, source: detectSource(from) };
+    return { type, confidence, company: null, position: null, source: detectSource(from), applicationDate: null };
   }
 
-  const fromBody = extractFromText(bodyText.slice(0, 4000));
-  const fromSubject = extractFromText(subject);
+  const normalizedInput: EmailInput = { subject, bodyText, from };
+  const provider = resolveProvider(normalizedInput);
+  const extraction = provider.extract(normalizedInput);
 
-  const company = fromBody.company ?? fromSubject.company ?? companyFromDisplayName(from);
-  const position = fromBody.position ?? fromSubject.position;
+  // The platform-specific provider's own template phrasing is the
+  // authority; only fall back to the generic patterns (and, after that, the
+  // From display name) to fill in whatever it didn't find — never to
+  // second-guess or replace what it did find.
+  const fallback = provider === genericProvider ? extraction : genericProvider.extract(normalizedInput);
 
-  return { type, confidence, company, position, source: detectSource(from) };
+  const position = extraction.position ?? fallback.position;
+  const company = extraction.company ?? fallback.company ?? companyFromDisplayName(from);
+  const applicationDate = extraction.applicationDate ?? fallback.applicationDate;
+  const source = provider === genericProvider ? detectSource(from) : provider.id;
+
+  return { type, confidence, company, position, source, applicationDate };
 }

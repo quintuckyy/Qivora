@@ -7,9 +7,37 @@ export interface ParsedGmailMessage {
   bodyText: string;
 }
 
-function decodeBase64Url(data: string): string {
+function decodeBase64Url(data: string): Buffer {
   const base64 = data.replace(/-/g, '+').replace(/_/g, '/');
-  return Buffer.from(base64, 'base64').toString('utf-8');
+  return Buffer.from(base64, 'base64');
+}
+
+/** The Gmail API hands back a part's raw bytes (base64url-wrapped for
+ * JSON), not the decoded text — whatever Content-Transfer-Encoding the
+ * original message used is still applied on top. Quoted-printable is a
+ * very common one (any non-ASCII character, like an em dash or accented
+ * letter, tends to trigger it), and without this a real LinkedIn
+ * confirmation email came through as literal "=E2=80=93" in place of an
+ * en dash and "=3D" in place of every "=" sign, with soft line-wraps
+ * ("=\n") splitting words and even URLs mid-string — silently garbling
+ * text for every provider, not just this one case. */
+function decodeQuotedPrintable(text: string): string {
+  const withoutSoftBreaks = text.replace(/=\r?\n/g, '');
+  const bytes = Buffer.from(
+    withoutSoftBreaks.replace(/=([0-9A-Fa-f]{2})/g, (_, hex: string) => String.fromCharCode(parseInt(hex, 16))),
+    'binary',
+  );
+  return bytes.toString('utf-8');
+}
+
+function decodePartBody(part: GmailMessagePart, data: string): string {
+  const encoding = part.headers
+    ?.find((h) => h.name.toLowerCase() === 'content-transfer-encoding')
+    ?.value?.trim()
+    .toLowerCase();
+
+  const raw = decodeBase64Url(data);
+  return encoding === 'quoted-printable' ? decodeQuotedPrintable(raw.toString('utf-8')) : raw.toString('utf-8');
 }
 
 function stripHtml(html: string): string {
@@ -35,10 +63,10 @@ function findBody(part: GmailMessagePart | undefined): { plain?: string; html?: 
   if (!part) return {};
 
   if (part.mimeType === 'text/plain' && part.body?.data) {
-    return { plain: decodeBase64Url(part.body.data) };
+    return { plain: decodePartBody(part, part.body.data) };
   }
   if (part.mimeType === 'text/html' && part.body?.data) {
-    return { html: decodeBase64Url(part.body.data) };
+    return { html: decodePartBody(part, part.body.data) };
   }
 
   const result: { plain?: string; html?: string } = {};

@@ -116,4 +116,90 @@ describe('classifyEmail', () => {
     expect(result.type).toBe('OTHER');
     expect(result.source).toBeNull();
   });
+
+  // Regression: a real JobStreet notification with this exact subject shape
+  // used to fall through every pattern and either grab nothing or, worse,
+  // treat the full sentence as the company name.
+  it('parses "<position> was successfully submitted to <company>" from JobStreet', () => {
+    const result = classifyEmail({
+      subject: 'Web Developer was successfully submitted to FilePino',
+      bodyText: 'Your application has been sent. Good luck!',
+      from: 'notifications@jobstreet.com.ph',
+    });
+
+    expect(result.type).toBe('APPLICATION_RECEIVED');
+    expect(result.position).toBe('Web Developer');
+    expect(result.company).toBe('FilePino');
+    expect(result.source).toBe('JobStreet');
+  });
+
+  it('parses a real LinkedIn confirmation email\'s "job card" position, separate from the company-only subject', () => {
+    const result = classifyEmail({
+      subject: 'Quinn, your application was sent to SGV & Co.',
+      bodyText: 'Associate Full Stack Developer \n SGV & Co. · Makati (Hybrid)\n \n Applied on August 28, 2026',
+      from: 'LinkedIn <jobs-noreply@linkedin.com>',
+    });
+
+    expect(result.position).toBe('Associate Full Stack Developer');
+    expect(result.company).toBe('SGV & Co');
+    expect(result.source).toBe('LinkedIn');
+  });
+
+  it('routes a linkedin.com email to the LinkedIn provider as the source', () => {
+    const result = classifyEmail({
+      subject: 'Your application was sent to Acme Robotics',
+      bodyText: 'You applied for Full Stack Developer at Acme Robotics.',
+      from: 'jobs-noreply@linkedin.com',
+    });
+
+    expect(result.position).toBe('Full Stack Developer');
+    expect(result.company).toBe('Acme Robotics');
+    expect(result.source).toBe('LinkedIn');
+  });
+
+  it('routes an indeed.com email to the Indeed provider as the source', () => {
+    const result = classifyEmail({
+      subject: 'Indeed Application: Full Stack Developer',
+      bodyText: 'Your application was submitted to Acme Robotics.',
+      from: 'invite@indeed.com',
+    });
+
+    expect(result.position).toBe('Full Stack Developer');
+    expect(result.company).toBe('Acme Robotics');
+    expect(result.source).toBe('Indeed');
+  });
+
+  it('does not guess a company/position from a vague, ambiguous email instead of leaving them blank', () => {
+    const result = classifyEmail({
+      subject: 'Application Update',
+      bodyText:
+        'Thank you for applying! We have received your application and appreciate your interest. ' +
+        'Our team will review things and get back to you regarding next steps.',
+      from: 'notifications@mail.example.com',
+    });
+
+    expect(result.type).toBe('APPLICATION_RECEIVED');
+    expect(result.position).toBeNull();
+    expect(result.company).toBeNull();
+  });
+
+  it('extracts an explicitly stated application date', () => {
+    const result = classifyEmail({
+      subject: 'Web Developer was successfully submitted to FilePino',
+      bodyText: 'You applied on August 20, 2026. Good luck!',
+      from: 'notifications@jobstreet.com.ph',
+    });
+
+    expect(result.applicationDate).toEqual(new Date('August 20, 2026'));
+  });
+
+  it('leaves applicationDate null when no date is stated in the email', () => {
+    const result = classifyEmail({
+      subject: 'Your application to Acme Robotics has been received',
+      bodyText: 'Thank you for applying to the Senior Backend Engineer position at Acme Robotics.',
+      from: '"Acme Robotics Recruiting" <careers@acmerobotics.com>',
+    });
+
+    expect(result.applicationDate).toBeNull();
+  });
 });
