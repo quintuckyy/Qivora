@@ -4,6 +4,7 @@ import { useAsync } from '../hooks/useAsync';
 import { emailSyncApi } from '../api/emailSync';
 import { ApiError } from '../api/client';
 import type { DetectedEmailType, EmailSuggestion, GmailSyncResult } from '../api/types';
+import { useEmailSyncBadge } from '../context/EmailSyncBadgeContext';
 import { LoadingState } from '../components/LoadingState';
 import { ErrorState } from '../components/ErrorState';
 import { EmptyState } from '../components/EmptyState';
@@ -170,6 +171,7 @@ function SuggestionCard({ suggestion, onResolved }: { suggestion: EmailSuggestio
 export function EmailSyncPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const code = searchParams.get('code');
+  const { refetchPendingCount } = useEmailSyncBadge();
 
   const { status, data: gmailStatus, error: statusError, refetch: refetchStatus } = useAsync(
     () => emailSyncApi.getStatus(),
@@ -181,6 +183,13 @@ export function EmailSyncPage() {
     error: suggestionsError,
     refetch: refetchSuggestions,
   } = useAsync(() => emailSyncApi.listSuggestions(), []);
+
+  // The sidebar badge counts the same pending suggestions this queue shows —
+  // whenever the queue changes, the badge needs to catch up too.
+  function refreshQueueAndBadge() {
+    refetchSuggestions();
+    refetchPendingCount();
+  }
 
   const [connecting, setConnecting] = useState(false);
   const [exchanging, setExchanging] = useState(false);
@@ -268,7 +277,7 @@ export function EmailSyncPage() {
     try {
       const result = await emailSyncApi.sync();
       setSyncResult(result);
-      refetchSuggestions();
+      refreshQueueAndBadge();
       refetchStatus(); // picks up the new lastSyncedAt / nextSyncAvailableAt so the cooldown kicks in immediately
     } catch (err) {
       setSyncError(err instanceof ApiError ? err.message : 'Unable to sync Gmail right now.');
@@ -350,7 +359,7 @@ export function EmailSyncPage() {
           ) : (
             <div className="suggestion-list">
               {suggestions.map((suggestion) => (
-                <SuggestionCard key={suggestion.id} suggestion={suggestion} onResolved={refetchSuggestions} />
+                <SuggestionCard key={suggestion.id} suggestion={suggestion} onResolved={refreshQueueAndBadge} />
               ))}
             </div>
           ))}

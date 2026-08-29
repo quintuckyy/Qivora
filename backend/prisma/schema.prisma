@@ -59,7 +59,31 @@ model User {
   gmailConnection GmailConnection?
   processedEmails ProcessedEmail[]
 
+  passwordResetTokens PasswordResetToken[]
+
   @@map("users")
+}
+
+/** One row per password-reset request. Only a hash of the token is ever
+ * stored — the raw token exists solely in the emailed link, never touches
+ * the database — so a DB read alone can never be used to reset an account.
+ * `usedAt` blocks reuse once a token has reset a password; `expiresAt`
+ * blocks it after the request has gone stale. */
+model PasswordResetToken {
+  id String @id @default(uuid())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  tokenHash String @unique
+
+  expiresAt DateTime
+  usedAt    DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@map("password_reset_tokens")
 }
 
 model JobApplication {
@@ -182,6 +206,13 @@ model GmailConnection {
   scope                 String
 
   lastSyncedAt DateTime?
+
+  /** Set when Google's token refresh comes back `invalid_grant` — the
+   * refresh token was revoked or expired, so every future refresh attempt
+   * would fail identically until the user reconnects. The automatic sync job
+   * checks this before touching a connection so it doesn't keep retrying a
+   * call that can only ever fail; cleared on the next successful reconnect. */
+  needsReconnect Boolean @default(false)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

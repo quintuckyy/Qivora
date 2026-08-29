@@ -1,5 +1,5 @@
 import { INestApplication, ValidationPipe } from '@nestjs/common';
-import { Test } from '@nestjs/testing';
+import { Test, TestingModuleBuilder } from '@nestjs/testing';
 import { AppModule } from '../../src/app.module';
 import { PrismaService } from '../../src/database/prisma.service';
 import { cleanDatabase } from './db';
@@ -9,10 +9,20 @@ export interface TestApp {
   prisma: PrismaService;
 }
 
-export async function createTestApp(): Promise<TestApp> {
-  const moduleFixture = await Test.createTestingModule({
+/** `configure` lets a spec override a provider before the module compiles —
+ * e.g. swapping MailService for a spy so a test can capture what would have
+ * been emailed (a real password-reset token only ever exists in that email,
+ * never in an API response or in the DB, which only stores its hash). */
+export async function createTestApp(
+  configure?: (builder: TestingModuleBuilder) => TestingModuleBuilder,
+): Promise<TestApp> {
+  let builder = Test.createTestingModule({
     imports: [AppModule],
-  }).compile();
+  });
+  if (configure) {
+    builder = configure(builder);
+  }
+  const moduleFixture = await builder.compile();
 
   const app = moduleFixture.createNestApplication();
 

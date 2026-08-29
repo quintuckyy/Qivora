@@ -1,10 +1,14 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
+import { EmailSyncBadgeProvider, useEmailSyncBadge } from '../context/EmailSyncBadgeContext';
 import { BriefcaseIcon, ChartIcon, FileIcon, GridIcon, LogoutIcon, MailIcon } from './icons';
+import { NavBadge } from './NavBadge';
+import logoMark from '../assets/logo-mark.png';
 
-export function Layout() {
+function LayoutShell() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const { pendingCount } = useEmailSyncBadge();
 
   function handleLogout() {
     logout();
@@ -17,8 +21,8 @@ export function Layout() {
     <div className="app-shell">
       <aside className="app-sidebar">
         <div className="app-brand">
-          <span className="app-brand-mark">JT</span>
-          <span>Job Tracker</span>
+          <img src={logoMark} alt="" className="app-brand-mark" />
+          <span>Qivora</span>
         </div>
         <nav className="app-nav">
           <NavLink to="/" end>
@@ -40,6 +44,7 @@ export function Layout() {
           <NavLink to="/email-sync">
             <MailIcon />
             <span>Email Sync</span>
+            <NavBadge count={pendingCount} />
           </NavLink>
         </nav>
         <div className="app-sidebar-footer">
@@ -56,5 +61,13 @@ export function Layout() {
         <Outlet />
       </main>
     </div>
+  );
+}
+
+export function Layout() {
+  return (
+    <EmailSyncBadgeProvider>
+      <LayoutShell />
+    </EmailSyncBadgeProvider>
   );
 }

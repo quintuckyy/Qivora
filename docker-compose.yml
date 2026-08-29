@@ -50,6 +50,11 @@ services:
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
       GOOGLE_OAUTH_REDIRECT_URI: ${GOOGLE_OAUTH_REDIRECT_URI:-http://localhost:5173/email-sync}
       EMAIL_SYNC_ENCRYPTION_KEY: ${EMAIL_SYNC_ENCRYPTION_KEY:-}
+      # Transactional email (password reset) — optional. Blank/unset
+      # BREVO_API_KEY disables real sending without affecting anything else
+      # (see backend/.env.example).
+      BREVO_API_KEY: ${BREVO_API_KEY:-}
+      MAIL_FROM: ${MAIL_FROM:-}
 
     ports:
       - "${BACKEND_PORT:-3000}:3000"
@@ -75,6 +80,10 @@ services:
         # Baked into the JS bundle at build time — must be a URL the browser can
         # reach, not a Docker-internal hostname like http://backend:3000.
         VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:3000}
+        # "Continue with Google" — same OAuth client ID as the backend's
+        # GOOGLE_CLIENT_ID (see backend's environment block below). Not a
+        # secret. Blank leaves the login page's Google button disabled.
+        VITE_GOOGLE_CLIENT_ID: ${VITE_GOOGLE_CLIENT_ID:-}
     container_name: job_tracker_frontend
     restart: unless-stopped
 
