@@ -44,7 +44,12 @@ describe('Email sync (e2e)', () => {
         .set('Authorization', authHeader)
         .expect(200);
 
-      expect(response.body).toEqual({ connected: false, email: null, lastSyncedAt: null });
+      expect(response.body).toEqual({
+        connected: false,
+        email: null,
+        lastSyncedAt: null,
+        nextSyncAvailableAt: null,
+      });
     });
 
     it('rejects requests without a bearer token', async () => {

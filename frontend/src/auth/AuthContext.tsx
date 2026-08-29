@@ -10,9 +10,13 @@ interface StoredAuth {
   user: User;
 }
 
+// "Remember me" decides which of these a session is written to — checked
+// persists across browser restarts (localStorage), unchecked clears itself
+// once the tab/browser closes (sessionStorage). Reading checks both so a
+// session started either way is picked up the same on reload.
 function readStoredAuth(): StoredAuth | null {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(STORAGE_KEY) ?? sessionStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
     return JSON.parse(raw) as StoredAuth;
   } catch {
@@ -24,7 +28,8 @@ interface AuthContextValue {
   user: User | null;
   token: string | null;
   isAuthenticated: boolean;
-  login: (payload: LoginPayload) => Promise<void>;
+  login: (payload: LoginPayload, remember?: boolean) => Promise<void>;
+  loginWithGoogle: (accessToken: string, remember?: boolean) => Promise<void>;
   register: (payload: RegisterPayload) => Promise<void>;
   logout: () => void;
 }
@@ -42,21 +47,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setAuth(null);
     setAuthToken(null);
     localStorage.removeItem(STORAGE_KEY);
+    sessionStorage.removeItem(STORAGE_KEY);
   }, []);
 
   // Any authenticated request that comes back 401 (expired/invalid token) logs the user out.
   setUnauthorizedHandler(logout);
 
-  const persist = useCallback((next: StoredAuth) => {
+  const persist = useCallback((next: StoredAuth, remember: boolean) => {
     setAuth(next);
     setAuthToken(next.token);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+    const store = remember ? localStorage : sessionStorage;
+    const other = remember ? sessionStorage : localStorage;
+    store.setItem(STORAGE_KEY, JSON.stringify(next));
+    other.removeItem(STORAGE_KEY);
   }, []);
 
   const login = useCallback(
-    async (payload: LoginPayload) => {
+    async (payload: LoginPayload, remember = true) => {
       const response = await authApi.login(payload);
-      persist({ token: response.accessToken, user: response.user });
+      persist({ token: response.accessToken, user: response.user }, remember);
+    },
+    [persist],
+  );
+
+  const loginWithGoogle = useCallback(
+    async (accessToken: string, remember = true) => {
+      const response = await authApi.googleLogin(accessToken);
+      persist({ token: response.accessToken, user: response.user }, remember);
     },
     [persist],
   );
@@ -75,10 +92,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       token: auth?.token ?? null,
       isAuthenticated: auth !== null,
       login,
+      loginWithGoogle,
       register,
       logout,
     }),
-    [auth, login, register, logout],
+    [auth, login, loginWithGoogle, register, logout],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -5,6 +5,8 @@ import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { RolesGuard } from './guards/roles.guard';
+import { MailService } from '../mail/mail.service';
+import { GoogleAuthClient } from './google-auth.client';
 
 @Module({
   imports: [
@@ -25,11 +27,9 @@ import { RolesGuard } from './guards/roles.guard';
     AuthService,
     JwtAuthGuard,
     RolesGuard,
+    MailService,
+    GoogleAuthClient,
   ],
-  exports: [
-    JwtModule,
-    JwtAuthGuard,
-    RolesGuard,
-  ],
+  exports: [JwtModule, JwtAuthGuard, RolesGuard],
 })
 export class AuthModule {}

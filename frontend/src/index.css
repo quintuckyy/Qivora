@@ -124,19 +124,16 @@ a {
   white-space: nowrap;
 }
 
+/* The Qivora "Q" mark — a transparent-background PNG, not a colored badge,
+ * so it floats directly on the dark surfaces beneath it. drop-shadow (not
+ * box-shadow) follows the icon's actual silhouette rather than its
+ * rectangular bounding box, which matters since the artwork isn't a square. */
 .app-brand-mark {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 30px;
+  display: block;
   height: 30px;
-  border-radius: 9px;
-  background: linear-gradient(135deg, var(--color-primary), var(--color-blue));
-  color: #04121a;
-  font-weight: 800;
-  font-size: 0.85rem;
+  width: auto;
   flex-shrink: 0;
-  box-shadow: 0 0 0 1px rgba(34, 211, 238, 0.25), 0 6px 16px -6px rgba(34, 211, 238, 0.5);
+  filter: drop-shadow(0 2px 10px rgba(34, 211, 238, 0.4));
 }
 
 .app-nav {
@@ -556,6 +553,27 @@ a {
   letter-spacing: 0.03em;
 }
 
+/* Lets a field's label share its row with a secondary action (e.g. "Forgot
+ * password?" beside the Password label) instead of stacking underneath it. */
+.field-label-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.field-label-action {
+  text-transform: none;
+  letter-spacing: normal;
+  font-weight: 600;
+  font-size: 0.8rem;
+  color: var(--color-primary);
+}
+
+.field-label-action:hover {
+  color: var(--color-primary-hover);
+}
+
 .field small {
   color: var(--color-text-faint);
 }
@@ -651,30 +669,60 @@ textarea {
 /* --- Auth pages --- */
 
 .auth-page {
-  min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 1.5rem;
-  background: radial-gradient(circle at 20% 15%, rgba(34, 211, 238, 0.08), transparent 45%),
-    radial-gradient(circle at 85% 80%, rgba(96, 165, 250, 0.08), transparent 45%), var(--color-bg);
+  background: radial-gradient(circle at 20% 15%, rgba(34, 211, 238, 0.1), transparent 45%),
+    radial-gradient(circle at 85% 80%, rgba(96, 165, 250, 0.09), transparent 45%), var(--color-bg);
+}
+
+@keyframes auth-card-enter {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .auth-card {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-md);
-  padding: 2.25rem;
+  /* A tinted, layered glow instead of a flat black shadow — a soft cyan
+   * bloom under a deep navy drop, both keyed to the page's own palette
+   * rather than a generic box-shadow, plus a 1px inner highlight along the
+   * top edge to suggest a light catching the card's rim. */
+  box-shadow:
+    0 24px 48px -20px rgba(2, 6, 16, 0.7),
+    0 0 0 1px rgba(34, 211, 238, 0.05),
+    0 14px 40px -22px rgba(34, 211, 238, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  padding: 2.5rem;
   width: 100%;
   max-width: 380px;
   display: flex;
   flex-direction: column;
-  gap: 0.95rem;
+  gap: 1.1rem;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .auth-card {
+    animation: auth-card-enter 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+  }
 }
 
 .auth-card-wide {
   max-width: 460px;
+}
+
+.auth-card h1 {
+  font-size: 1.65rem;
+  letter-spacing: -0.02em;
 }
 
 .auth-brand {
@@ -682,6 +730,12 @@ textarea {
   align-items: center;
   gap: 0.6rem;
   margin-bottom: 0.35rem;
+}
+
+.auth-brand-name {
+  font-family: var(--font-display);
+  font-weight: 800;
+  letter-spacing: -0.01em;
 }
 
 .auth-subtitle {
@@ -695,6 +749,168 @@ textarea {
   font-size: 0.88rem;
   color: var(--color-text-muted);
   margin: 0.5rem 0 0;
+}
+
+/* A confirmation/error state replacing the form entirely (link sent, link
+ * invalid) — centered icon + heading + message + one CTA, distinct from the
+ * form's own left-aligned layout above it. */
+.auth-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 0.85rem;
+}
+
+.auth-state .auth-subtitle {
+  margin: 0;
+}
+
+.auth-success-icon,
+.auth-error-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.auth-success-icon {
+  background: var(--color-success-soft);
+  color: var(--color-success);
+}
+
+.auth-error-icon {
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
+}
+
+.auth-success-icon svg,
+.auth-error-icon svg {
+  width: 26px;
+  height: 26px;
+}
+
+/* Leading-icon input treatment used on the auth forms (email/password) — a
+ * muted glyph inset in the field itself, a small but real premium-SaaS-login
+ * tell that a bare labeled input doesn't have. */
+.field-icon-input {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.field-icon-input input {
+  padding-left: 2.5rem;
+}
+
+.field-icon-input-toggle input {
+  padding-right: 2.5rem;
+}
+
+.field-icon-glyph {
+  position: absolute;
+  left: 0.8rem;
+  width: 16px;
+  height: 16px;
+  color: var(--color-text-faint);
+  pointer-events: none;
+}
+
+.field-icon-toggle {
+  position: absolute;
+  right: 0.6rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text-faint);
+  cursor: pointer;
+  transition: color 0.15s ease, background-color 0.15s ease;
+}
+
+.field-icon-toggle svg {
+  width: 16px;
+  height: 16px;
+}
+
+.field-icon-toggle:hover {
+  color: var(--color-text-muted);
+  background: var(--color-surface-hover);
+}
+
+.field-icon-toggle:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
+}
+
+.auth-card .btn-primary:active:not(:disabled) {
+  transform: translateY(0) scale(0.98);
+}
+
+/* "Remember me" + "Forgot password?" sharing a row beneath the password
+ * field, matched to the field label's own size/color rather than looking
+ * like a second, competing form field. */
+.auth-options-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: -0.3rem;
+}
+
+.checkbox-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  user-select: none;
+}
+
+.checkbox-label input[type='checkbox'] {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: var(--color-primary);
+  cursor: pointer;
+}
+
+/* A labeled rule splitting the primary submit action from an alternate
+ * sign-in method below it — two flex-1 lines either side of small caps text,
+ * rather than a bare <hr>. */
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: var(--color-text-faint);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--color-border);
+}
+
+.btn-google-note {
+  margin: -0.3rem 0 0;
+  text-align: center;
+  font-size: 0.78rem;
+  color: var(--color-text-faint);
 }
 
 /* --- Stat tiles --- */
