@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { ApiError } from '../api/client';
+import logoMark from '../assets/logo-mark.png';
 
 export function RegisterPage() {
   const { register } = useAuth();
@@ -38,11 +39,11 @@ export function RegisterPage() {
     <div className="auth-page">
       <form className="auth-card auth-card-wide" onSubmit={handleSubmit}>
         <div className="auth-brand">
-          <span className="app-brand-mark">JT</span>
-          <span style={{ fontFamily: 'var(--font-display)', fontWeight: 800 }}>Job Tracker</span>
+          <img src={logoMark} alt="" className="app-brand-mark" />
+          <span className="auth-brand-name">Qivora</span>
         </div>
         <h1>Create an account</h1>
-        <p className="auth-subtitle">Start tracking your job search today.</p>
+        <p className="auth-subtitle">Your smarter path to the next opportunity.</p>
 
         {error && (
           <p className="form-error" role="alert">

@@ -3,6 +3,7 @@ import { useAuth } from '../auth/AuthContext';
 import { EmailSyncBadgeProvider, useEmailSyncBadge } from '../context/EmailSyncBadgeContext';
 import { BriefcaseIcon, ChartIcon, FileIcon, GridIcon, LogoutIcon, MailIcon } from './icons';
 import { NavBadge } from './NavBadge';
+import logoMark from '../assets/logo-mark.png';
 
 function LayoutShell() {
   const { user, logout } = useAuth();
@@ -20,8 +21,8 @@ function LayoutShell() {
     <div className="app-shell">
       <aside className="app-sidebar">
         <div className="app-brand">
-          <span className="app-brand-mark">JT</span>
-          <span>Job Tracker</span>
+          <img src={logoMark} alt="" className="app-brand-mark" />
+          <span>Qivora</span>
         </div>
         <nav className="app-nav">
           <NavLink to="/" end>
