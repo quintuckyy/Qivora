@@ -34,8 +34,7 @@ export function ForgotPasswordPage() {
     <div className="auth-page">
       <div className="auth-card">
         <div className="auth-brand">
-          <img src={logoMark} alt="" className="app-brand-mark" />
-          <span className="auth-brand-name">Qivora</span>
+          <img src={logoMark} alt="Qivora" className="app-brand-mark" />
         </div>
 
         {sent ? (
@@ -69,7 +68,7 @@ export function ForgotPasswordPage() {
             )}
 
             <label className="field">
-              <span>Email</span>
+              <span className="sr-only">Email</span>
               <div className="field-icon-input">
                 <MailIcon className="field-icon-glyph" aria-hidden="true" />
                 <input
@@ -77,6 +76,7 @@ export function ForgotPasswordPage() {
                   required
                   autoComplete="email"
                   autoFocus
+                  placeholder="Email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                 />

@@ -67,10 +67,10 @@ export function LoginPage() {
       <form className="auth-card" onSubmit={handleSubmit}>
         <div className="auth-brand">
           <img src={logoMark} alt="" className="app-brand-mark" />
-          <span className="auth-brand-name">Qivora</span>
+          
         </div>
-        <h1>Welcome back</h1>
-        <p className="auth-subtitle">Log in to keep tracking your applications.</p>
+        <h1>Qivora</h1>
+        <p className="auth-subtitle">Your smarter path to the next opportunity.</p>
 
         {error && (
           <p className="form-error" role="alert">
@@ -79,13 +79,14 @@ export function LoginPage() {
         )}
 
         <label className="field">
-          <span>Email</span>
+          <span className="sr-only">Email</span>
           <div className="field-icon-input">
             <MailIcon className="field-icon-glyph" aria-hidden="true" />
             <input
               type="email"
               required
               autoComplete="email"
+              placeholder="Email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
             />
@@ -93,13 +94,14 @@ export function LoginPage() {
         </label>
 
         <label className="field">
-          <span>Password</span>
+          <span className="sr-only">Password</span>
           <div className="field-icon-input field-icon-input-toggle">
             <LockIcon className="field-icon-glyph" aria-hidden="true" />
             <input
               type={showPassword ? 'text' : 'password'}
               required
               autoComplete="current-password"
+              placeholder="Password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
             />

@@ -56,8 +56,7 @@ export function ResetPasswordPage() {
     <div className="auth-page">
       <div className="auth-card">
         <div className="auth-brand">
-          <img src={logoMark} alt="" className="app-brand-mark" />
-          <span className="auth-brand-name">Qivora</span>
+          <img src={logoMark} alt="Qivora" className="app-brand-mark" />
         </div>
 
         {succeeded ? (
@@ -97,7 +96,7 @@ export function ResetPasswordPage() {
             )}
 
             <label className="field">
-              <span>New password</span>
+              <span className="sr-only">New password</span>
               <div className="field-icon-input field-icon-input-toggle">
                 <LockIcon className="field-icon-glyph" aria-hidden="true" />
                 <input
@@ -106,6 +105,7 @@ export function ResetPasswordPage() {
                   minLength={8}
                   autoComplete="new-password"
                   autoFocus
+                  placeholder="New password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                 />
@@ -124,7 +124,7 @@ export function ResetPasswordPage() {
             </label>
 
             <label className="field">
-              <span>Confirm new password</span>
+              <span className="sr-only">Confirm new password</span>
               <div className="field-icon-input">
                 <LockIcon className="field-icon-glyph" aria-hidden="true" />
                 <input
@@ -132,6 +132,7 @@ export function ResetPasswordPage() {
                   required
                   minLength={8}
                   autoComplete="new-password"
+                  placeholder="Confirm new password"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                 />

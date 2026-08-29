@@ -2,5 +2,5 @@
 .env
 .env.local
 
-# Local Claude Code skill plugin files (not app code)
+# Local Claude Code skill plugin files
 .claude/skills/

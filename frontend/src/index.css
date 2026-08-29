@@ -704,10 +704,10 @@ textarea {
     inset 0 1px 0 rgba(255, 255, 255, 0.04);
   padding: 2.5rem;
   width: 100%;
-  max-width: 380px;
+  max-width: 400px;
   display: flex;
   flex-direction: column;
-  gap: 1.1rem;
+  gap: 1rem;
 }
 
 @media (prefers-reduced-motion: no-preference) {
@@ -716,20 +716,42 @@ textarea {
   }
 }
 
-.auth-card-wide {
-  max-width: 460px;
-}
-
 .auth-card h1 {
   font-size: 1.65rem;
   letter-spacing: -0.02em;
 }
 
+/* Auth cards centre the brand mark + greeting above a left-aligned form,
+ * with a larger logo than the app sidebar uses. */
+.auth-card .app-brand-mark {
+  height: 48px;
+}
+
+.auth-card h1,
+.auth-card .auth-subtitle {
+  text-align: center;
+}
+
+/* Accessible label that stays in the a11y tree while the visible affordance
+ * is carried by the input's placeholder (auth forms). */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 .auth-brand {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 0.6rem;
-  margin-bottom: 0.35rem;
+  margin-bottom: 0.6rem;
 }
 
 .auth-brand-name {
@@ -855,15 +877,31 @@ textarea {
   transform: translateY(0) scale(0.98);
 }
 
-/* "Remember me" + "Forgot password?" sharing a row beneath the password
- * field, matched to the field label's own size/color rather than looking
- * like a second, competing form field. */
+/* Comfortable touch height + a more legible placeholder now that it doubles
+ * as the field's visible label. */
+.auth-card input {
+  padding-top: 0.72rem;
+  padding-bottom: 0.72rem;
+}
+
+.auth-card input::placeholder {
+  color: var(--color-text-muted);
+}
+
+
 .auth-options-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
   margin-top: -0.3rem;
+}
+
+/* Give the "Remember me / Forgot password?" row more breathing room from the
+ * password field above and the submit button below. */
+.auth-card .auth-options-row {
+  margin-top: 0.35rem;
+  margin-bottom: 0.35rem;
 }
 
 .checkbox-label {

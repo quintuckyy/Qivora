@@ -37,10 +37,10 @@ export function RegisterPage() {
 
   return (
     <div className="auth-page">
-      <form className="auth-card auth-card-wide" onSubmit={handleSubmit}>
+      <form className="auth-card" onSubmit={handleSubmit}>
         <div className="auth-brand">
           <img src={logoMark} alt="" className="app-brand-mark" />
-          <span className="auth-brand-name">Qivora</span>
+        
         </div>
         <h1>Create an account</h1>
         <p className="auth-subtitle">Your smarter path to the next opportunity.</p>
@@ -53,33 +53,43 @@ export function RegisterPage() {
 
         <div className="field-row">
           <label className="field">
-            <span>First name</span>
-            <input value={firstName} onChange={(e) => setFirstName(e.target.value)} />
+            <span className="sr-only">First name</span>
+            <input
+              placeholder="First name"
+              value={firstName}
+              onChange={(e) => setFirstName(e.target.value)}
+            />
           </label>
           <label className="field">
-            <span>Last name</span>
-            <input value={lastName} onChange={(e) => setLastName(e.target.value)} />
+            <span className="sr-only">Last name</span>
+            <input
+              placeholder="Last name"
+              value={lastName}
+              onChange={(e) => setLastName(e.target.value)}
+            />
           </label>
         </div>
 
         <label className="field">
-          <span>Email</span>
+          <span className="sr-only">Email</span>
           <input
             type="email"
             required
             autoComplete="email"
+            placeholder="Email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
           />
         </label>
 
         <label className="field">
-          <span>Password</span>
+          <span className="sr-only">Password</span>
           <input
             type="password"
             required
             minLength={8}
             autoComplete="new-password"
+            placeholder="Password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
