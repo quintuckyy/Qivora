@@ -2,5 +2,9 @@
 .env
 .env.local
 
-# Local Claude Code skill plugin files
-.claude/skills/
+# Local Claude Code files (settings.json is intentionally tracked; skill
+# plugin dirs and machine-local settings are not, anywhere in the tree)
+.claude/settings.local.json
+**/.claude/skills/
+**/.claude/scheduled_tasks.lock
+ 
