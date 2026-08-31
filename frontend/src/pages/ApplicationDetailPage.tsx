@@ -7,11 +7,20 @@ import type { JobApplication } from '../api/types';
 import { LoadingState } from '../components/LoadingState';
 import { ErrorState } from '../components/ErrorState';
 import { StatusBadge } from '../components/StatusBadge';
+import { ExternalLinkIcon } from '../components/icons';
+import { ProgressSection } from '../components/application-detail/ProgressSection';
 import { HistorySection } from '../components/application-detail/HistorySection';
 import { ResumeAssignmentSection } from '../components/application-detail/ResumeAssignmentSection';
 import { InterviewsSection } from '../components/application-detail/InterviewsSection';
 import { NotesSection } from '../components/application-detail/NotesSection';
-import { StatusUpdateSection } from '../components/application-detail/StatusUpdateSection';
+
+const SOURCE_LABELS: Record<string, string> = {
+  LINKEDIN: 'LinkedIn',
+  JOBSTREET: 'JobStreet',
+  INDEED: 'Indeed',
+  EMAIL_SYNC: 'Email Sync',
+  MANUAL: 'Manual entry',
+};
 
 export function ApplicationDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -49,17 +58,42 @@ export function ApplicationDetailPage() {
   if (asyncStatus === 'loading') return <LoadingState label="Loading application…" />;
   if (asyncStatus === 'error') return <ErrorState message={error} onRetry={refetch} />;
 
+  const sourceLabel = application.source ? SOURCE_LABELS[application.source] ?? null : null;
+
   return (
-    <div className="page">
-      <div className="page-header">
-        <div>
+    <div className="page app-detail">
+      <div className="page-header app-detail-header">
+        <div className="app-detail-headline">
           <Link to="/applications" className="back-link">
-            ← Back to applications
+            ← Applications
           </Link>
-          <h1>
-            {application.position} · {application.company}
-          </h1>
-          <StatusBadge status={application.status} />
+          <h1>{application.position}</h1>
+          <div className="app-detail-sub">
+            <span className="app-detail-company">{application.company}</span>
+            <StatusBadge status={application.status} />
+          </div>
+          <div className="app-detail-meta">
+            <span>{application.location ?? 'Location undisclosed'}</span>
+            <span aria-hidden="true">·</span>
+            <span>{formatSalaryRange(application.salaryMin, application.salaryMax)}</span>
+            <span aria-hidden="true">·</span>
+            <span>Added {new Date(application.createdAt).toLocaleDateString()}</span>
+            {application.jobUrl && (
+              <>
+                <span aria-hidden="true">·</span>
+                <a href={application.jobUrl} target="_blank" rel="noreferrer">
+                  Job posting
+                  <ExternalLinkIcon />
+                </a>
+              </>
+            )}
+            {sourceLabel && (
+              <>
+                <span aria-hidden="true">·</span>
+                <span>via {sourceLabel}</span>
+              </>
+            )}
+          </div>
         </div>
         <div className="page-header-actions">
           <button type="button" className="btn btn-secondary" onClick={() => setEditing((v) => !v)}>
@@ -77,61 +111,35 @@ export function ApplicationDetailPage() {
         </p>
       )}
 
-      {editing ? (
-        <EditApplicationForm
-          application={application}
-          onSaved={() => {
-            setEditing(false);
-            refetch();
-          }}
-          onCancel={() => setEditing(false)}
-        />
-      ) : (
-        <section className="card">
-          <dl className="detail-grid">
-            <div>
-              <dt>Location</dt>
-              <dd>{application.location ?? '—'}</dd>
-            </div>
-            <div>
-              <dt>Salary</dt>
-              <dd>{formatSalaryRange(application.salaryMin, application.salaryMax)}</dd>
-            </div>
-            <div>
-              <dt>Job posting</dt>
-              <dd>
-                {application.jobUrl ? (
-                  <a href={application.jobUrl} target="_blank" rel="noreferrer">
-                    View posting
-                  </a>
-                ) : (
-                  '—'
-                )}
-              </dd>
-            </div>
-            <div>
-              <dt>Added</dt>
-              <dd>{new Date(application.createdAt).toLocaleString()}</dd>
-            </div>
-          </dl>
-        </section>
-      )}
-
-      <div className="detail-columns">
-        <div className="detail-column">
-          <StatusUpdateSection
+      <div className="app-workspace">
+        {editing && (
+          <EditApplicationForm
             application={application}
-            onUpdated={() => {
+            onSaved={() => {
+              setEditing(false);
               refetch();
-              setHistoryRefreshToken((t) => t + 1);
             }}
+            onCancel={() => setEditing(false)}
           />
-          <HistorySection applicationId={application.id} refreshToken={historyRefreshToken} />
-          <ResumeAssignmentSection application={application} onAssigned={refetch} />
-        </div>
-        <div className="detail-column">
-          <InterviewsSection applicationId={application.id} />
-          <NotesSection applicationId={application.id} />
+        )}
+
+        <ProgressSection
+          application={application}
+          onUpdated={() => {
+            refetch();
+            setHistoryRefreshToken((t) => t + 1);
+          }}
+        />
+
+        <div className="app-workspace-grid">
+          <div className="app-workspace-col">
+            <InterviewsSection applicationId={application.id} />
+            <HistorySection applicationId={application.id} refreshToken={historyRefreshToken} />
+          </div>
+          <div className="app-workspace-col">
+            <ResumeAssignmentSection application={application} onAssigned={refetch} />
+            <NotesSection applicationId={application.id} />
+          </div>
         </div>
       </div>
     </div>
@@ -225,7 +233,7 @@ function EditApplicationForm({
 }
 
 function formatSalaryRange(min: number | null, max: number | null): string {
-  if (min == null && max == null) return '—';
+  if (min == null && max == null) return 'Salary undisclosed';
   if (min != null && max != null) return `$${min.toLocaleString()} – $${max.toLocaleString()}`;
   return `$${(min ?? max)!.toLocaleString()}`;
 }

@@ -1,8 +1,9 @@
 import { useAsync } from '../../hooks/useAsync';
 import { applicationsApi } from '../../api/applications';
-import { LoadingState } from '../LoadingState';
 import { ErrorState } from '../ErrorState';
-import { EmptyState } from '../EmptyState';
+import { StatusBadge } from '../StatusBadge';
+import { ArrowRightIcon } from '../icons';
+import { MiniEmpty } from './MiniEmpty';
 
 export function HistorySection({
   applicationId,
@@ -18,23 +19,45 @@ export function HistorySection({
 
   return (
     <section className="card">
-      <h2>Status history</h2>
-      {status === 'loading' && <LoadingState label="Loading history…" />}
+      <div className="card-header">
+        <h2>Status history</h2>
+      </div>
+
+      {status === 'loading' && <p className="mini-loading">Loading history…</p>}
       {status === 'error' && <ErrorState message={error} onRetry={refetch} />}
       {status === 'success' &&
         (data.length === 0 ? (
-          <EmptyState message="No status changes yet." />
+          <MiniEmpty>No status changes yet.</MiniEmpty>
         ) : (
-          <ul className="history-list">
+          <ol className="timeline">
             {data.map((entry) => (
-              <li key={entry.id}>
-                <span>
-                  {entry.fromStatus ? `${entry.fromStatus} → ${entry.toStatus}` : `Created as ${entry.toStatus}`}
-                </span>
-                <time>{new Date(entry.changedAt).toLocaleString()}</time>
+              <li key={entry.id} className="timeline-item">
+                <span className="timeline-dot" />
+                <div className="timeline-body">
+                  <span className="timeline-title">
+                    {entry.fromStatus ? (
+                      <>
+                        <StatusBadge status={entry.fromStatus} />
+                        <ArrowRightIcon className="timeline-arrow" />
+                        <StatusBadge status={entry.toStatus} />
+                      </>
+                    ) : (
+                      <>
+                        <span className="timeline-added">Added as</span>
+                        <StatusBadge status={entry.toStatus} />
+                      </>
+                    )}
+                  </span>
+                  <time className="timeline-time" dateTime={entry.changedAt}>
+                    {new Date(entry.changedAt).toLocaleString(undefined, {
+                      dateStyle: 'medium',
+                      timeStyle: 'short',
+                    })}
+                  </time>
+                </div>
               </li>
             ))}
-          </ul>
+          </ol>
         ))}
     </section>
   );

@@ -1,16 +1,19 @@
-import { useState, type FormEvent } from 'react';
+import { useMemo, useState, type FormEvent } from 'react';
 import { useAsync } from '../../hooks/useAsync';
 import { interviewsApi, type InterviewPayload } from '../../api/interviews';
 import { ApiError } from '../../api/client';
 import type { Interview } from '../../api/types';
-import { LoadingState } from '../LoadingState';
 import { ErrorState } from '../ErrorState';
-import { EmptyState } from '../EmptyState';
+import { MiniEmpty } from './MiniEmpty';
 
 function toDatetimeLocal(iso: string): string {
   const d = new Date(iso);
   const pad = (n: number) => String(n).padStart(2, '0');
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function formatWhen(iso: string): string {
+  return new Date(iso).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
 }
 
 const emptyForm: InterviewPayload = { title: '', scheduledAt: '', location: '', meetingUrl: '', notes: '' };
@@ -27,6 +30,17 @@ export function InterviewsSection({ applicationId }: { applicationId: string }) 
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  // Soonest-first, with the next still-upcoming interview flagged so it reads
+  // as the thing to prepare for rather than one row among many.
+  const { ordered, nextUpcomingId } = useMemo(() => {
+    const list = [...(interviews ?? [])].sort(
+      (a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime(),
+    );
+    const now = Date.now();
+    const next = list.find((i) => new Date(i.scheduledAt).getTime() >= now);
+    return { ordered: list, nextUpcomingId: next?.id ?? null };
+  }, [interviews]);
 
   function startCreate() {
     setForm(emptyForm);
@@ -92,7 +106,7 @@ export function InterviewsSection({ applicationId }: { applicationId: string }) 
       <div className="card-header">
         <h2>Interviews</h2>
         {!showForm && (
-          <button type="button" className="btn btn-secondary" onClick={startCreate}>
+          <button type="button" className="btn btn-secondary btn-sm" onClick={startCreate}>
             Schedule interview
           </button>
         )}
@@ -145,18 +159,29 @@ export function InterviewsSection({ applicationId }: { applicationId: string }) 
         </form>
       )}
 
-      {status === 'loading' && <LoadingState label="Loading interviews…" />}
+      {status === 'loading' && <p className="mini-loading">Loading interviews…</p>}
       {status === 'error' && <ErrorState message={error} onRetry={refetch} />}
       {status === 'success' &&
-        (interviews.length === 0 && !showForm ? (
-          <EmptyState message="No interviews scheduled yet." />
+        (ordered.length === 0 && !showForm ? (
+          <MiniEmpty
+            action={
+              <button type="button" className="btn btn-secondary btn-sm" onClick={startCreate}>
+                Schedule
+              </button>
+            }
+          >
+            No interviews scheduled.
+          </MiniEmpty>
         ) : (
           <ul className="entry-list">
-            {interviews.map((interview) => (
+            {ordered.map((interview) => (
               <li key={interview.id}>
                 <div>
-                  <strong>{interview.title}</strong>
-                  <span className="muted"> · {new Date(interview.scheduledAt).toLocaleString()}</span>
+                  <div className="entry-title-row">
+                    <strong>{interview.title}</strong>
+                    {interview.id === nextUpcomingId && <span className="mini-tag">Next</span>}
+                  </div>
+                  <div className="muted">{formatWhen(interview.scheduledAt)}</div>
                   {interview.location && <div className="muted">{interview.location}</div>}
                   {interview.meetingUrl && (
                     <div>
@@ -168,12 +193,16 @@ export function InterviewsSection({ applicationId }: { applicationId: string }) 
                   {interview.notes && <p className="muted">{interview.notes}</p>}
                 </div>
                 <div className="entry-actions">
-                  <button type="button" className="btn btn-secondary" onClick={() => startEdit(interview)}>
+                  <button
+                    type="button"
+                    className="btn btn-secondary btn-sm"
+                    onClick={() => startEdit(interview)}
+                  >
                     Edit
                   </button>
                   <button
                     type="button"
-                    className="btn btn-danger"
+                    className="btn btn-danger btn-sm"
                     onClick={() => handleDelete(interview.id)}
                     disabled={deletingId === interview.id}
                   >

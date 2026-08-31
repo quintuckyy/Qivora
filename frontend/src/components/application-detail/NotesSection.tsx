@@ -3,9 +3,8 @@ import { useAsync } from '../../hooks/useAsync';
 import { notesApi } from '../../api/notes';
 import { ApiError } from '../../api/client';
 import type { ApplicationNote } from '../../api/types';
-import { LoadingState } from '../LoadingState';
 import { ErrorState } from '../ErrorState';
-import { EmptyState } from '../EmptyState';
+import { MiniEmpty } from './MiniEmpty';
 
 export function NotesSection({ applicationId }: { applicationId: string }) {
   const { status, data: notes, error, refetch } = useAsync(() => notesApi.list(applicationId), [applicationId]);
@@ -68,7 +67,7 @@ export function NotesSection({ applicationId }: { applicationId: string }) {
       <div className="card-header">
         <h2>Notes</h2>
         {!showForm && (
-          <button type="button" className="btn btn-secondary" onClick={startCreate}>
+          <button type="button" className="btn btn-secondary btn-sm" onClick={startCreate}>
             Add note
           </button>
         )}
@@ -96,26 +95,43 @@ export function NotesSection({ applicationId }: { applicationId: string }) {
         </form>
       )}
 
-      {status === 'loading' && <LoadingState label="Loading notes…" />}
+      {status === 'loading' && <p className="mini-loading">Loading notes…</p>}
       {status === 'error' && <ErrorState message={error} onRetry={refetch} />}
       {status === 'success' &&
         (notes.length === 0 && !showForm ? (
-          <EmptyState message="No notes yet." />
+          <MiniEmpty
+            action={
+              <button type="button" className="btn btn-secondary btn-sm" onClick={startCreate}>
+                Add note
+              </button>
+            }
+          >
+            No notes yet.
+          </MiniEmpty>
         ) : (
           <ul className="entry-list">
             {notes.map((note) => (
               <li key={note.id}>
                 <div>
                   <p>{note.content}</p>
-                  <span className="muted">{new Date(note.createdAt).toLocaleString()}</span>
+                  <span className="muted">
+                    {new Date(note.createdAt).toLocaleString(undefined, {
+                      dateStyle: 'medium',
+                      timeStyle: 'short',
+                    })}
+                  </span>
                 </div>
                 <div className="entry-actions">
-                  <button type="button" className="btn btn-secondary" onClick={() => startEdit(note)}>
+                  <button
+                    type="button"
+                    className="btn btn-secondary btn-sm"
+                    onClick={() => startEdit(note)}
+                  >
                     Edit
                   </button>
                   <button
                     type="button"
-                    className="btn btn-danger"
+                    className="btn btn-danger btn-sm"
                     onClick={() => handleDelete(note.id)}
                     disabled={deletingId === note.id}
                   >
