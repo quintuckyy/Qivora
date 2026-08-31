@@ -14,6 +14,8 @@ export interface ApplicationsQuery {
   status?: ApplicationStatus | '';
   /** Filter by résumé assignment: `false` = only applications missing a résumé. */
   hasResume?: boolean;
+  /** Filter to applications assigned this specific résumé version. */
+  resumeId?: string;
   sortBy: string;
   sortOrder: 'asc' | 'desc';
 }
@@ -42,6 +44,7 @@ function buildQueryString(query: ApplicationsQuery): string {
   if (query.search) params.set('search', query.search);
   if (query.status) params.set('status', query.status);
   if (query.hasResume !== undefined) params.set('hasResume', String(query.hasResume));
+  if (query.resumeId) params.set('resumeId', query.resumeId);
   return params.toString();
 }
 

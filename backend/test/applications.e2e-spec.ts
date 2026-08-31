@@ -325,6 +325,41 @@ describe('Applications (e2e)', () => {
       expect(response.body.data[0].company).toBe('Assessment Co');
     });
 
+    it('filters to applications assigned a specific resume', async () => {
+      const resume = await request(app.getHttpServer())
+        .post('/resumes')
+        .set('Authorization', authHeader)
+        .attach('file', Buffer.from('%PDF-1.4 resume'), {
+          filename: 'resume.pdf',
+          contentType: 'application/pdf',
+        })
+        .expect(201);
+
+      const withResume = await createApplication({
+        company: 'Has Resume Co',
+        jobUrl: 'https://careers.example.com/jobs/has-resume',
+      });
+      await createApplication({
+        company: 'No Resume Co',
+        jobUrl: 'https://careers.example.com/jobs/no-resume',
+      });
+
+      await request(app.getHttpServer())
+        .patch(`/applications/${withResume.id}/resume`)
+        .set('Authorization', authHeader)
+        .send({ resumeId: resume.body.id })
+        .expect(200);
+
+      const response = await request(app.getHttpServer())
+        .get('/applications')
+        .query({ resumeId: resume.body.id })
+        .set('Authorization', authHeader)
+        .expect(200);
+
+      expect(response.body.data).toHaveLength(1);
+      expect(response.body.data[0].company).toBe('Has Resume Co');
+    });
+
     it('searches across company, position, and location (case-insensitive)', async () => {
       await createApplication({
         company: 'Infor',

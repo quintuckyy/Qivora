@@ -69,6 +69,14 @@ export class QueryApplicationsDto {
   hasResume?: boolean;
 
   @ApiPropertyOptional({
+    description: 'Return only applications assigned to this resume version.',
+    example: 'd5c41086-0173-45cd-946e-d48712c7bd52',
+  })
+  @IsOptional()
+  @IsString()
+  resumeId?: string;
+
+  @ApiPropertyOptional({
     enum: [
       'createdAt',
       'updatedAt',

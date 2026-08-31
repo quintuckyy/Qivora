@@ -6,13 +6,14 @@ import { useAuth } from '../auth/AuthContext';
 import type { Resume } from '../api/types';
 import { LoadingState } from '../components/LoadingState';
 import { ErrorState } from '../components/ErrorState';
-import { EmptyState } from '../components/EmptyState';
+import { PlusIcon } from '../components/icons';
+import { ResumeCard } from '../components/resumes/ResumeCard';
+import { ResumePreviewModal } from '../components/resumes/ResumePreviewModal';
+import { RenameResumeModal } from '../components/resumes/RenameResumeModal';
+import { ResumesEmptyState } from '../components/resumes/ResumesEmptyState';
 
-function formatSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
+const ACCEPT = '.pdf,.doc,.docx';
+const MAX_SIZE = 5 * 1024 * 1024;
 
 export function ResumesPage() {
   const { token } = useAuth();
@@ -22,110 +23,168 @@ export function ResumesPage() {
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [settingDefaultId, setSettingDefaultId] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
 
-  async function handleUpload() {
+  const [previewResume, setPreviewResume] = useState<Resume | null>(null);
+  const [renameResume, setRenameResume] = useState<Resume | null>(null);
+
+  function pickFile() {
+    setUploadError(null);
+    fileInputRef.current?.click();
+  }
+
+  async function handleFileChange() {
     const file = fileInputRef.current?.files?.[0];
-    if (!file) {
-      setUploadError('Choose a file first.');
+    if (!file) return;
+
+    if (file.size > MAX_SIZE) {
+      setUploadError('That file is larger than 5 MB.');
+      if (fileInputRef.current) fileInputRef.current.value = '';
       return;
     }
+
     setUploadError(null);
     setUploading(true);
     try {
       await resumesApi.upload(file);
-      if (fileInputRef.current) fileInputRef.current.value = '';
       refetch();
     } catch (err) {
       setUploadError(err instanceof ApiError ? err.message : 'Unable to upload resume.');
     } finally {
       setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
     }
   }
 
   async function handleDownload(resume: Resume) {
+    setActionError(null);
     setDownloadingId(resume.id);
     try {
       await resumesApi.download(resume, token);
     } catch (err) {
-      alert(err instanceof ApiError ? err.message : 'Unable to download resume.');
+      setActionError(err instanceof ApiError ? err.message : 'Unable to download resume.');
     } finally {
       setDownloadingId(null);
     }
   }
 
-  async function handleDelete(id: string) {
-    if (!confirm('Delete this resume?')) return;
-    setDeletingId(id);
+  async function handleSetDefault(resume: Resume) {
+    setActionError(null);
+    setSettingDefaultId(resume.id);
     try {
-      await resumesApi.remove(id);
+      await resumesApi.setDefault(resume.id);
       refetch();
     } catch (err) {
-      alert(err instanceof ApiError ? err.message : 'Unable to delete resume.');
+      setActionError(err instanceof ApiError ? err.message : 'Unable to set default resume.');
     } finally {
-      setDeletingId(null);
+      setSettingDefaultId(null);
     }
   }
 
+  async function handleDelete(resume: Resume) {
+    const extra = resume.applicationCount
+      ? ` It's assigned to ${resume.applicationCount} application${
+          resume.applicationCount === 1 ? '' : 's'
+        }, which will be left without a resume.`
+      : '';
+    if (!confirm(`Delete "${resume.name}"?${extra}`)) return;
+
+    setActionError(null);
+    try {
+      await resumesApi.remove(resume.id);
+      refetch();
+    } catch (err) {
+      setActionError(err instanceof ApiError ? err.message : 'Unable to delete resume.');
+    }
+  }
+
+  const uploadButton = (
+    <button type="button" className="btn btn-primary" onClick={pickFile} disabled={uploading}>
+      <PlusIcon />
+      {uploading ? 'Uploading…' : 'Upload resume'}
+    </button>
+  );
+
   return (
     <div className="page">
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept={ACCEPT}
+        onChange={handleFileChange}
+        className="sr-only"
+        tabIndex={-1}
+      />
+
       <div className="page-header">
-        <h1>Resumes</h1>
+        <div className="page-heading">
+          <h1>Resumes</h1>
+          <p className="page-subtitle">
+            Keep your tailored resume versions in one place and track how each performs.
+          </p>
+        </div>
+        {status === 'success' && resumes.length > 0 && (
+          <div className="page-header-actions">{uploadButton}</div>
+        )}
       </div>
 
-      <section className="card">
-        <h2>Upload a resume</h2>
-        <p className="muted">PDF, DOC, or DOCX, up to 5 MB.</p>
-        <div className="status-update-row">
-          <input ref={fileInputRef} type="file" accept=".pdf,.doc,.docx" />
-          <button type="button" className="btn btn-primary" onClick={handleUpload} disabled={uploading}>
-            {uploading ? 'Uploading…' : 'Upload'}
-          </button>
-        </div>
-        {uploadError && (
-          <p className="form-error" role="alert">
-            {uploadError}
-          </p>
-        )}
-      </section>
+      {uploadError && (
+        <p className="form-error" role="alert">
+          {uploadError}
+        </p>
+      )}
+      {actionError && (
+        <p className="form-error" role="alert">
+          {actionError}
+        </p>
+      )}
 
       {status === 'loading' && <LoadingState label="Loading resumes…" />}
       {status === 'error' && <ErrorState message={error} onRetry={refetch} />}
+
       {status === 'success' &&
         (resumes.length === 0 ? (
-          <EmptyState message="You haven't uploaded any resumes yet." />
+          <ResumesEmptyState uploadAction={uploadButton} />
         ) : (
-          <ul className="entry-list">
+          <div className="resume-grid">
             {resumes.map((resume) => (
-              <li key={resume.id}>
-                <div>
-                  <strong>{resume.originalName}</strong>
-                  <div className="muted">
-                    {formatSize(resume.size)} · Uploaded {new Date(resume.createdAt).toLocaleDateString()}
-                  </div>
-                </div>
-                <div className="entry-actions">
-                  <button
-                    type="button"
-                    className="btn btn-secondary"
-                    onClick={() => handleDownload(resume)}
-                    disabled={downloadingId === resume.id}
-                  >
-                    {downloadingId === resume.id ? 'Downloading…' : 'Download'}
-                  </button>
-                  <button
-                    type="button"
-                    className="btn btn-danger"
-                    onClick={() => handleDelete(resume.id)}
-                    disabled={deletingId === resume.id}
-                  >
-                    Delete
-                  </button>
-                </div>
-              </li>
+              <ResumeCard
+                key={resume.id}
+                resume={resume}
+                downloading={downloadingId === resume.id}
+                settingDefault={settingDefaultId === resume.id}
+                onPreview={() => setPreviewResume(resume)}
+                onDownload={() => handleDownload(resume)}
+                onRename={() => setRenameResume(resume)}
+                onSetDefault={() => handleSetDefault(resume)}
+                onDelete={() => handleDelete(resume)}
+              />
             ))}
-          </ul>
+          </div>
         ))}
+
+      {previewResume && (
+        <ResumePreviewModal
+          resume={previewResume}
+          onClose={() => setPreviewResume(null)}
+          onDownload={() => {
+            handleDownload(previewResume);
+            setPreviewResume(null);
+          }}
+        />
+      )}
+
+      {renameResume && (
+        <RenameResumeModal
+          resume={renameResume}
+          onClose={() => setRenameResume(null)}
+          onRenamed={() => {
+            setRenameResume(null);
+            refetch();
+          }}
+        />
+      )}
     </div>
   );
 }

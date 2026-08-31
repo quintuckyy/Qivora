@@ -183,6 +183,13 @@ model Resume {
   mimeType     String
   size         Int
   filePath     String
+
+  /** At most one resume per user is the default — the one pre-selected when
+   * assigning a resume to a new application. Enforced in the service layer
+   * (set-default clears the others in the same transaction), not by a DB
+   * constraint, since "zero defaults" is also valid (e.g. before first upload). */
+  isDefault Boolean @default(false)
+
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 

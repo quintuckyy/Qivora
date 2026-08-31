@@ -8,6 +8,8 @@ describe('ResumesController', () => {
     create: jest.Mock;
     findAll: jest.Mock;
     findOne: jest.Mock;
+    rename: jest.Mock;
+    setDefault: jest.Mock;
     remove: jest.Mock;
   };
   const user = { sub: 'user-1' };
@@ -17,6 +19,8 @@ describe('ResumesController', () => {
       create: jest.fn(),
       findAll: jest.fn(),
       findOne: jest.fn(),
+      rename: jest.fn(),
+      setDefault: jest.fn(),
       remove: jest.fn(),
     };
 
@@ -82,6 +86,58 @@ describe('ResumesController', () => {
         resume.originalName,
       );
     });
+  });
+
+  describe('preview', () => {
+    it('streams the resolved file inline with its mime type', async () => {
+      const resume = {
+        id: 'resume-1',
+        filePath: './uploads/resumes/stored.pdf',
+        originalName: 'resume.pdf',
+        mimeType: 'application/pdf',
+      };
+      service.findOne.mockResolvedValue(resume);
+      const response = { sendFile: jest.fn() } as unknown as Response;
+
+      await controller.preview(user, 'resume-1', response);
+
+      expect(service.findOne).toHaveBeenCalledWith(user.sub, 'resume-1');
+      expect(response.sendFile).toHaveBeenCalledWith(
+        expect.stringContaining('stored.pdf'),
+        expect.objectContaining({
+          headers: expect.objectContaining({
+            'Content-Type': 'application/pdf',
+            'Content-Disposition': 'inline; filename="resume.pdf"',
+          }),
+        }),
+      );
+    });
+  });
+
+  it('delegates rename to the service', async () => {
+    const expected = { id: 'resume-1', name: 'Backend .NET' };
+    service.rename.mockResolvedValue(expected);
+
+    const result = await controller.rename(user, 'resume-1', {
+      name: 'Backend .NET',
+    });
+
+    expect(service.rename).toHaveBeenCalledWith(
+      user.sub,
+      'resume-1',
+      'Backend .NET',
+    );
+    expect(result).toBe(expected);
+  });
+
+  it('delegates setDefault to the service', async () => {
+    const expected = { id: 'resume-1', isDefault: true };
+    service.setDefault.mockResolvedValue(expected);
+
+    const result = await controller.setDefault(user, 'resume-1');
+
+    expect(service.setDefault).toHaveBeenCalledWith(user.sub, 'resume-1');
+    expect(result).toBe(expected);
   });
 
   it('delegates remove to the service', async () => {

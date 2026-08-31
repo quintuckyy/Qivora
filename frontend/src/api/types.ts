@@ -85,6 +85,13 @@ export interface ApplicationNote {
   updatedAt: string;
 }
 
+/** How far the applications assigned to a resume have progressed. */
+export interface ResumeMetrics {
+  applications: number;
+  interviews: number;
+  offers: number;
+}
+
 export interface Resume {
   id: string;
   name: string;
@@ -93,6 +100,10 @@ export interface Resume {
   mimeType: string;
   size: number;
   filePath: string;
+  isDefault: boolean;
+  /** Number of job applications currently assigned this resume. */
+  applicationCount: number;
+  metrics: ResumeMetrics;
   userId: string;
   createdAt: string;
   updatedAt: string;

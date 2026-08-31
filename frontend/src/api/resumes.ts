@@ -10,6 +10,11 @@ export const resumesApi = {
     return api.postForm<Resume>('/resumes', formData);
   },
 
+  rename: (id: string, name: string) =>
+    api.patch<Resume>(`/resumes/${id}`, { name }),
+
+  setDefault: (id: string) => api.patch<Resume>(`/resumes/${id}/default`),
+
   remove: (id: string) => api.delete<{ message: string }>(`/resumes/${id}`),
 
   /**
@@ -34,5 +39,23 @@ export const resumesApi = {
     link.click();
     link.remove();
     URL.revokeObjectURL(url);
+  },
+
+  /**
+   * Fetches the raw file (same token constraint as download) and returns a blob
+   * object URL the caller renders in an <iframe>. Caller is responsible for
+   * revoking the URL when the preview closes.
+   */
+  previewObjectUrl: async (resumeId: string, token: string | null): Promise<string> => {
+    const response = await fetch(`${API_BASE_URL}/resumes/${resumeId}/preview`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+
+    if (!response.ok) {
+      throw new ApiError(response.status, 'Failed to load resume preview.');
+    }
+
+    const blob = await response.blob();
+    return URL.createObjectURL(blob);
   },
 };

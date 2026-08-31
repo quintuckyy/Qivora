@@ -274,6 +274,62 @@ export function GoogleIcon(props: SVGProps<SVGSVGElement>) {
   );
 }
 
+export function DownloadIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Icon {...props}>
+      <path d="M12 3v12" />
+      <path d="M7 11l5 5 5-5" />
+      <path d="M4 20.5h16" />
+    </Icon>
+  );
+}
+
+export function StarIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Icon {...props}>
+      <path d="M12 3.5l2.6 5.3 5.9.85-4.25 4.15 1 5.85L12 17.75 6.75 20.5l1-5.85L3.5 10.5l5.9-.85z" />
+    </Icon>
+  );
+}
+
+export function StarFilledIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Icon fill="currentColor" {...props}>
+      <path d="M12 3.5l2.6 5.3 5.9.85-4.25 4.15 1 5.85L12 17.75 6.75 20.5l1-5.85L3.5 10.5l5.9-.85z" />
+    </Icon>
+  );
+}
+
+export function PencilIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Icon {...props}>
+      <path d="M4 20h4L18.5 9.5a2 2 0 0 0 0-2.83l-1.17-1.17a2 2 0 0 0-2.83 0L4 16z" />
+      <path d="M13.5 6.5l4 4" />
+    </Icon>
+  );
+}
+
+export function TrashIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Icon {...props}>
+      <path d="M4 7h16" />
+      <path d="M9 7V4.5h6V7" />
+      <path d="M6 7l1 13h10l1-13" />
+      <path d="M10 11v6M14 11v6" />
+    </Icon>
+  );
+}
+
+export function MoreVerticalIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Icon {...props}>
+      <circle cx="12" cy="5" r="1.4" />
+      <circle cx="12" cy="12" r="1.4" />
+      <circle cx="12" cy="19" r="1.4" />
+    </Icon>
+  );
+}
+
 /** Alphabetical-sort-descending glyph — "Z" over "A" beside an up arrow —
  * the mirror of ArrowDownAZIcon for "Z to A" order. */
 export function ArrowUpZAIcon(props: SVGProps<SVGSVGElement>) {

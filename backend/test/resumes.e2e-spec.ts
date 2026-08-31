@@ -55,6 +55,110 @@ describe('Resumes (e2e)', () => {
     expect(typeof resume.id).toBe('string');
   });
 
+  it('marks the first uploaded resume as the default and later ones as non-default', async () => {
+    const first = await uploadResume('first.pdf');
+    const second = await uploadResume('second.pdf');
+
+    expect(first.isDefault).toBe(true);
+    expect(second.isDefault).toBe(false);
+  });
+
+  it('returns usage counts and performance metrics for each resume', async () => {
+    const resume = await uploadResume();
+
+    const application = await request(app.getHttpServer())
+      .post('/applications')
+      .set('Authorization', authHeader)
+      .send({ company: 'Infor', position: 'Engineer' })
+      .expect(201);
+
+    await request(app.getHttpServer())
+      .patch(`/applications/${application.body.id}/resume`)
+      .set('Authorization', authHeader)
+      .send({ resumeId: resume.id })
+      .expect(200);
+
+    await request(app.getHttpServer())
+      .patch(`/applications/${application.body.id}/status`)
+      .set('Authorization', authHeader)
+      .send({ status: 'INTERVIEW' })
+      .expect(200);
+
+    const list = await request(app.getHttpServer())
+      .get('/resumes')
+      .set('Authorization', authHeader)
+      .expect(200);
+
+    expect(list.body[0]).toEqual(
+      expect.objectContaining({
+        applicationCount: 1,
+        metrics: { applications: 1, interviews: 1, offers: 0 },
+      }),
+    );
+  });
+
+  it('renames a resume version', async () => {
+    const resume = await uploadResume();
+
+    const response = await request(app.getHttpServer())
+      .patch(`/resumes/${resume.id}`)
+      .set('Authorization', authHeader)
+      .send({ name: 'Backend .NET' })
+      .expect(200);
+
+    expect(response.body.name).toBe('Backend .NET');
+  });
+
+  it('moves the default flag when a different resume is set as default', async () => {
+    const first = await uploadResume('first.pdf');
+    const second = await uploadResume('second.pdf');
+
+    await request(app.getHttpServer())
+      .patch(`/resumes/${second.id}/default`)
+      .set('Authorization', authHeader)
+      .expect(200);
+
+    const list = await request(app.getHttpServer())
+      .get('/resumes')
+      .set('Authorization', authHeader)
+      .expect(200);
+
+    const byId = Object.fromEntries(
+      list.body.map((r: { id: string; isDefault: boolean }) => [r.id, r.isDefault]),
+    );
+    expect(byId[second.id]).toBe(true);
+    expect(byId[first.id]).toBe(false);
+  });
+
+  it('streams a resume inline for preview', async () => {
+    const resume = await uploadResume();
+
+    const response = await request(app.getHttpServer())
+      .get(`/resumes/${resume.id}/preview`)
+      .set('Authorization', authHeader)
+      .buffer(true)
+      .parse((res, callback) => {
+        const chunks: Buffer[] = [];
+        res.on('data', (chunk: Buffer) => chunks.push(chunk));
+        res.on('end', () => callback(null, Buffer.concat(chunks)));
+      })
+      .expect(200);
+
+    expect(response.headers['content-disposition']).toContain('inline');
+    expect(response.headers['content-type']).toContain('application/pdf');
+  });
+
+  it("returns 404 renaming another user's resume", async () => {
+    const resume = await uploadResume();
+    const otherUser = await registerAndLogin(app);
+
+    await request(app.getHttpServer())
+      .patch(`/resumes/${resume.id}`)
+      .set('Authorization', `Bearer ${otherUser.accessToken}`)
+      .send({ name: 'Nope' })
+      .expect(404);
+  });
+
   it('rejects an upload with a disallowed mime type', async () => {
     await request(app.getHttpServer())
       .post('/resumes')

@@ -66,6 +66,7 @@ export class ApplicationsService {
         search,
         status,
         hasResume,
+        resumeId,
         sortBy,
         sortOrder,
     } = query;
@@ -75,7 +76,9 @@ export class ApplicationsService {
     const where = {
         userId,
         ...(status ? { status } : {}),
-        ...(hasResume === true
+        ...(resumeId
+          ? { resumeId }
+          : hasResume === true
           ? { resumeId: { not: null } }
           : hasResume === false
             ? { resumeId: null }

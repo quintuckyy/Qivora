@@ -1,9 +1,11 @@
 import {
   BadRequestException,
+  Body,
   Controller,
   Delete,
   Get,
   Param,
+  Patch,
   Post,
   Res,
   UploadedFile,
@@ -13,15 +15,15 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import type { Response } from 'express';
 import { diskStorage } from 'multer';
-import { extname } from 'node:path';
+import { extname, resolve } from 'node:path';
 
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { ResumesService } from './resumes.service';
+import { UpdateResumeDto } from './dto/update-resume.dto';
 import {
   ApiCreatedResponse,
   ApiOkResponse,
-  ApiNoContentResponse,
   ApiBearerAuth,
   ApiBody,
   ApiConsumes,
@@ -144,6 +146,59 @@ export class ResumesController {
       resume.filePath,
       resume.originalName,
     );
+  }
+
+  @ApiOperation({
+    summary: 'Stream a resume inline for in-app preview',
+  })
+  @ApiOkResponse({
+    description: 'Resume file streamed with an inline content disposition',
+  })
+  @Get(':id/preview')
+  async preview(
+    @CurrentUser() user: JwtUser,
+    @Param('id') id: string,
+    @Res() response: Response,
+  ) {
+    const resume = await this.resumesService.findOne(user.sub, id);
+
+    // `inline` (vs. `attachment` on /download) lets the browser render the PDF
+    // in an <iframe> instead of triggering a save dialog.
+    return response.sendFile(resolve(resume.filePath), {
+      headers: {
+        'Content-Type': resume.mimeType,
+        'Content-Disposition': `inline; filename="${resume.originalName.replace(/"/g, '')}"`,
+      },
+    });
+  }
+
+  @ApiOperation({
+    summary: 'Rename a resume version',
+  })
+  @ApiOkResponse({
+    description: 'Resume renamed successfully',
+  })
+  @Patch(':id')
+  rename(
+    @CurrentUser() user: JwtUser,
+    @Param('id') id: string,
+    @Body() dto: UpdateResumeDto,
+  ) {
+    return this.resumesService.rename(user.sub, id, dto.name);
+  }
+
+  @ApiOperation({
+    summary: 'Mark a resume version as the default',
+  })
+  @ApiOkResponse({
+    description: 'Default resume updated successfully',
+  })
+  @Patch(':id/default')
+  setDefault(
+    @CurrentUser() user: JwtUser,
+    @Param('id') id: string,
+  ) {
+    return this.resumesService.setDefault(user.sub, id);
   }
 
   @ApiOperation({

@@ -45,14 +45,19 @@ export function ApplicationsListPage() {
   const sortByParam = searchParams.get('sortBy') ?? '';
   const sortBy = SORT_FIELDS.includes(sortByParam) ? sortByParam : 'createdAt';
   const sortOrder: 'asc' | 'desc' = searchParams.get('sortOrder') === 'asc' ? 'asc' : 'desc';
-  const missingResume = searchParams.get('resume') === 'missing';
+  // `resume` doubles as two filters: the literal `missing` (applications with no
+  // résumé) or a résumé id (applications assigned that specific version, linked
+  // from the Resumes hub's "View applications" action).
+  const resumeParam = searchParams.get('resume');
+  const missingResume = resumeParam === 'missing';
+  const resumeIdFilter = resumeParam && resumeParam !== 'missing' ? resumeParam : undefined;
 
   const [page, setPage] = useState(1);
   const [searchInput, setSearchInput] = useState('');
 
   const search = useDebouncedValue(searchInput, 350);
 
-  const hasActiveFilters = Boolean(searchInput.trim() || status || missingResume);
+  const hasActiveFilters = Boolean(searchInput.trim() || status || missingResume || resumeIdFilter);
 
   function patchParams(patch: Record<string, string | null>) {
     setSearchParams(
@@ -73,10 +78,14 @@ export function ApplicationsListPage() {
     patchParams({ status: null, resume: null });
   }
 
+  function clearResumeFilter() {
+    patchParams({ resume: null });
+  }
+
   // Any filter/sort change should snap back to page 1.
   useEffect(() => {
     setPage(1);
-  }, [search, status, sortBy, sortOrder, missingResume]);
+  }, [search, status, sortBy, sortOrder, missingResume, resumeIdFilter]);
 
   const { status: asyncStatus, data, error, refetch } = useAsync(
     () =>
@@ -86,10 +95,11 @@ export function ApplicationsListPage() {
         search: search || undefined,
         status: status || undefined,
         hasResume: missingResume ? false : undefined,
+        resumeId: resumeIdFilter,
         sortBy,
         sortOrder,
       }),
-    [page, search, status, sortBy, sortOrder, missingResume],
+    [page, search, status, sortBy, sortOrder, missingResume, resumeIdFilter],
   );
 
   // Keep the last successful page around so a next/prev (or filter) change can
@@ -185,6 +195,12 @@ export function ApplicationsListPage() {
           <span className="applications-count">
             {result.meta.total} {result.meta.total === 1 ? 'application' : 'applications'}
           </span>
+          {resumeIdFilter && (
+            <button type="button" className="clear-filters" onClick={clearResumeFilter}>
+              <XIcon />
+              Filtered by résumé
+            </button>
+          )}
           {hasActiveFilters && (
             <button type="button" className="clear-filters" onClick={clearFilters}>
               <XIcon />
