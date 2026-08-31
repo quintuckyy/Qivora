@@ -20,7 +20,7 @@ export function Pagination({
         Previous
       </button>
       <span className="pagination-status">
-        Page {meta.page} of {meta.totalPages} ({meta.total} total)
+        Page {meta.page} of {meta.totalPages}
       </span>
       <button
         type="button"

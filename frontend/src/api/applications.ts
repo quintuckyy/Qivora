@@ -12,9 +12,13 @@ export interface ApplicationsQuery {
   limit: number;
   search?: string;
   status?: ApplicationStatus | '';
+  /** Filter by résumé assignment: `false` = only applications missing a résumé. */
+  hasResume?: boolean;
   sortBy: string;
   sortOrder: 'asc' | 'desc';
 }
+
+export type ApplicationSource = 'LINKEDIN' | 'JOBSTREET' | 'INDEED' | 'EMAIL_SYNC' | 'MANUAL';
 
 export interface CreateApplicationPayload {
   company: string;
@@ -24,6 +28,7 @@ export interface CreateApplicationPayload {
   salaryMax?: number;
   location?: string;
   jobUrl?: string;
+  source?: ApplicationSource;
 }
 
 export type UpdateApplicationPayload = Partial<CreateApplicationPayload>;
@@ -36,6 +41,7 @@ function buildQueryString(query: ApplicationsQuery): string {
   params.set('sortOrder', query.sortOrder);
   if (query.search) params.set('search', query.search);
   if (query.status) params.set('status', query.status);
+  if (query.hasResume !== undefined) params.set('hasResume', String(query.hasResume));
   return params.toString();
 }
 

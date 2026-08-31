@@ -28,6 +28,7 @@ export function ApplicationCreatePage() {
         salaryMax: salaryMax ? Number(salaryMax) : undefined,
         location: location || undefined,
         jobUrl: jobUrl || undefined,
+        source: 'MANUAL',
       });
       navigate(`/applications/${created.id}`, { replace: true });
     } catch (err) {

@@ -27,6 +27,7 @@ export class ApplicationsService {
           salaryMax: dto.salaryMax,
           location: dto.location,
           jobUrl: dto.jobUrl,
+          source: dto.source,
           userId,
         },
       });
@@ -64,6 +65,7 @@ export class ApplicationsService {
         limit,
         search,
         status,
+        hasResume,
         sortBy,
         sortOrder,
     } = query;
@@ -73,6 +75,11 @@ export class ApplicationsService {
     const where = {
         userId,
         ...(status ? { status } : {}),
+        ...(hasResume === true
+          ? { resumeId: { not: null } }
+          : hasResume === false
+            ? { resumeId: null }
+            : {}),
         ...(search
         ? {
             OR: [

@@ -401,6 +401,7 @@ export class EmailSyncService {
         company,
         position,
         status: ApplicationStatus.APPLIED,
+        source: 'EMAIL_SYNC',
       });
       resultApplicationId = created.id;
     } else if (row.suggestedAction === 'UPDATE_STATUS') {

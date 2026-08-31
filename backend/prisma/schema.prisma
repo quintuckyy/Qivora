@@ -97,6 +97,12 @@ model JobApplication {
   location  String?
   jobUrl    String?
 
+  /** Where this application originated, when known: a job board id
+   * ("LINKEDIN" | "JOBSTREET" | "INDEED"), "EMAIL_SYNC" for one created from a
+   * confirmed Gmail suggestion, or "MANUAL" for the in-app form. NULL for rows
+   * created before this was tracked. Display-only — never affects behaviour. */
+  source String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

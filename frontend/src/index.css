@@ -344,8 +344,18 @@ a {
   gap: 0.5rem;
 }
 
-.page-footer-link {
-  text-align: center;
+.page-heading {
+  min-width: 0;
+}
+
+.page-heading h1 {
+  margin: 0;
+}
+
+.page-subtitle {
+  margin: 0.35rem 0 0;
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
 }
 
 .back-link {
@@ -506,7 +516,7 @@ a {
 }
 
 .btn-danger-solid {
-  background:rgb(253, 63, 63);
+  background:rgb(179, 39, 39);
   color: var(--color-text);
   box-shadow: 0 4px 14px -4px rgba(239, 68, 68, 0.55);
 }
@@ -1483,6 +1493,106 @@ textarea {
   color: var(--color-primary);
 }
 
+/* --- Find jobs popover --- */
+
+.find-jobs {
+  position: relative;
+}
+
+.find-jobs-search {
+  width: 16px;
+  height: 16px;
+}
+
+.find-jobs-chevron {
+  width: 14px;
+  height: 14px;
+  margin-left: -0.05rem;
+  transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.find-jobs-chevron-open {
+  transform: rotate(180deg);
+}
+
+.find-jobs-menu {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  right: 0;
+  z-index: 30;
+  min-width: 224px;
+  max-width: calc(100vw - 2rem);
+  margin: 0;
+  padding: 0.4rem;
+  list-style: none;
+  border-radius: var(--radius);
+  border: 1px solid var(--color-border-strong);
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.035), transparent 45%), var(--color-bg-elevated);
+  box-shadow: 0 0 0 1px rgba(34, 211, 238, 0.08), 0 20px 45px -14px rgba(2, 6, 16, 0.75),
+    0 0 30px -14px rgba(34, 211, 238, 0.3);
+  backdrop-filter: blur(16px);
+  animation: dropdown-in 0.14s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.find-jobs-item {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  width: 100%;
+  padding: 0.55rem 0.6rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  color: var(--color-text-muted);
+  text-decoration: none;
+  font-size: 0.88rem;
+  font-weight: 600;
+  transition: background-color 0.12s ease, color 0.12s ease, border-color 0.12s ease;
+}
+
+.find-jobs-item + .find-jobs-item {
+  margin-top: 0.15rem;
+}
+
+.find-jobs-item:hover,
+.find-jobs-item:focus-visible {
+  background: var(--color-surface-hover);
+  color: var(--color-text);
+  border-color: var(--color-primary-border);
+  outline: none;
+}
+
+.find-jobs-logo {
+  display: block;
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  flex-shrink: 0;
+  object-fit: cover;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+.find-jobs-ext {
+  width: 15px;
+  height: 15px;
+  margin-left: auto;
+  color: var(--color-text-faint);
+  transition: color 0.12s ease;
+}
+
+.find-jobs-item:hover .find-jobs-ext,
+.find-jobs-item:focus-visible .find-jobs-ext {
+  color: var(--color-primary);
+}
+
+/* On narrow screens the trigger can sit at the left of a wrapped header —
+ * anchor the popover's left edge to it so it can't run off-screen. */
+@media (max-width: 560px) {
+  .find-jobs-menu {
+    right: auto;
+    left: 0;
+  }
+}
+
 /* --- Sort direction toggle (matches the dropdown triggers) --- */
 
 .sort-direction-btn {
@@ -1595,6 +1705,217 @@ textarea {
 
 .sort-header-active {
   color: var(--color-primary);
+}
+
+/* --- Applications list --- */
+
+.applications-results {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  flex-wrap: wrap;
+}
+
+.applications-count {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+
+.clear-filters {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.25rem 0.55rem;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--color-text-muted);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.clear-filters svg {
+  width: 12px;
+  height: 12px;
+}
+
+.clear-filters:hover {
+  color: var(--color-text);
+  border-color: var(--color-primary-border);
+  background: var(--color-surface-hover);
+}
+
+.clear-filters:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--color-primary-soft);
+  color: var(--color-primary);
+}
+
+.application-row {
+  cursor: pointer;
+}
+
+.application-row:hover {
+  background: var(--color-surface-hover);
+}
+
+/* Whole row is clickable, but the company name stays the real link so
+   cmd/middle-click still opens the details page in a new tab. */
+.cell-truncate {
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: bottom;
+}
+
+.applications-table .col-company .cell-truncate {
+  max-width: 200px;
+}
+
+.applications-table .col-position .cell-truncate {
+  max-width: 240px;
+}
+
+.applications-table .col-location .cell-truncate {
+  max-width: 170px;
+}
+
+.applications-table .col-status {
+  white-space: nowrap;
+}
+
+/* Status reads as the row's headline signal, so give it a touch more weight
+   than the other cells without changing the shared badge component. */
+.applications-table .col-status .status-badge {
+  font-size: 0.77rem;
+  padding: 0.32rem 0.8rem;
+}
+
+.applications-table .col-added {
+  white-space: nowrap;
+  color: var(--color-text-muted);
+}
+
+/* --- Page transition (next / prev / filter change) ---
+   The current page dims out via the transition; when new rows arrive the
+   wrapper is re-keyed and the keyframes replay it in from below. */
+.applications-view {
+  transition: opacity 0.18s ease, filter 0.18s ease;
+  animation: applications-page-in 0.34s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+}
+
+.applications-view.is-refetching {
+  opacity: 0.38;
+  filter: saturate(0.8);
+  pointer-events: none;
+}
+
+@keyframes applications-page-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .applications-view {
+    animation: none;
+    transition: opacity 0.12s linear;
+  }
+}
+
+/* --- Applications cards (small screens) --- */
+
+.applications-cards {
+  display: none;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.application-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 1rem 1.05rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.025), transparent 45%), var(--color-surface);
+  box-shadow: var(--shadow-sm);
+  text-decoration: none;
+  color: var(--color-text);
+  transition: border-color 0.15s ease, background-color 0.15s ease, transform 0.15s ease;
+}
+
+.application-card:hover {
+  border-color: var(--color-primary-border);
+  background: var(--color-surface-hover);
+}
+
+.application-card:focus-visible {
+  outline: none;
+  border-color: var(--color-primary-border);
+  box-shadow: 0 0 0 3px var(--color-primary-soft);
+}
+
+.application-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.application-card-titles {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.application-card-position {
+  font-weight: 700;
+  font-size: 0.98rem;
+  line-height: 1.3;
+}
+
+.application-card-company {
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+}
+
+.application-card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.82rem;
+  color: var(--color-text-muted);
+}
+
+.application-card-meta span[aria-hidden='true'] {
+  color: var(--color-text-faint);
+}
+
+@media (max-width: 720px) {
+  .applications-table {
+    display: none;
+  }
+
+  .applications-cards {
+    display: flex;
+  }
 }
 
 /* --- Pagination --- */
@@ -1851,6 +2172,142 @@ textarea {
   .dashboard-grid {
     grid-template-columns: 1fr;
   }
+}
+
+/* --- Focus card: Needs attention + Upcoming interviews --- */
+
+.focus-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.focus-section + .focus-section {
+  margin-top: 1.1rem;
+  padding-top: 1.1rem;
+  border-top: 1px solid var(--color-border);
+}
+
+.focus-section h2 {
+  margin-bottom: 0.55rem;
+}
+
+.focus-empty {
+  margin: 0;
+  padding: 0.35rem 0.25rem;
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
+}
+
+.focus-section .entry-list li {
+  padding: 0.7rem 0;
+}
+
+.focus-section .entry-list li:first-child {
+  padding-top: 0;
+}
+
+/* --- Pipeline --- */
+
+/* The donut + legend sit centred in whatever height the grid row gives this
+ * card, so it stays balanced next to the taller Recent applications card. */
+.card-pipeline {
+  display: flex;
+  flex-direction: column;
+}
+
+.card-pipeline .donut-layout {
+  flex: 1;
+  justify-content: center;
+}
+
+/* --- Needs attention --- */
+
+.attention-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.attention-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0.5rem;
+  border-radius: var(--radius-sm);
+  text-decoration: none;
+  color: var(--color-text);
+  border: 1px solid transparent;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.attention-row:hover {
+  background: var(--color-surface-hover);
+  border-color: var(--color-border);
+}
+
+.attention-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  box-shadow: inset 0 0 0 1px currentColor;
+}
+
+.attention-icon svg {
+  width: 15px;
+  height: 15px;
+}
+
+.attention-icon-warning {
+  background: var(--color-warning-soft);
+  color: var(--color-warning);
+}
+
+.attention-icon-danger {
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
+}
+
+.attention-icon-primary {
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+}
+
+.attention-label {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.9rem;
+}
+
+.attention-arrow {
+  flex-shrink: 0;
+  color: var(--color-text-faint);
+  transition: color 0.15s ease, transform 0.15s ease;
+}
+
+.attention-row:hover .attention-arrow {
+  color: var(--color-primary);
+  transform: translateX(2px);
+}
+
+.all-clear {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.35rem 0.25rem;
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
+}
+
+.all-clear svg {
+  color: var(--color-success);
+  flex-shrink: 0;
 }
 
 /* --- Donut chart --- */

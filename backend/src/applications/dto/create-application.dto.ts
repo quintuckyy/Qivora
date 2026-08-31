@@ -1,5 +1,6 @@
 import {
   IsEnum,
+  IsIn,
   IsInt,
   IsOptional,
   IsString,
@@ -8,6 +9,15 @@ import {
 } from 'class-validator';
 import { ApplicationStatus } from '../../generated/prisma/enums';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+
+/** Display-only provenance labels — see JobApplication.source in the schema. */
+export const APPLICATION_SOURCES = [
+  'LINKEDIN',
+  'JOBSTREET',
+  'INDEED',
+  'EMAIL_SYNC',
+  'MANUAL',
+] as const;
 
 export class CreateApplicationDto {
   @ApiProperty({
@@ -59,4 +69,12 @@ export class CreateApplicationDto {
   @IsOptional()
   @IsUrl()
   jobUrl?: string;
+
+  @ApiPropertyOptional({
+    enum: APPLICATION_SOURCES,
+    description: 'Display-only origin label; does not affect any behaviour.',
+  })
+  @IsOptional()
+  @IsIn(APPLICATION_SOURCES)
+  source?: (typeof APPLICATION_SOURCES)[number];
 }

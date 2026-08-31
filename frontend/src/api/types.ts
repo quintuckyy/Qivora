@@ -37,6 +37,8 @@ export interface JobApplication {
   salaryMax: number | null;
   location: string | null;
   jobUrl: string | null;
+  /** Display-only origin label (e.g. "EMAIL_SYNC", "MANUAL"); null when unknown. */
+  source: string | null;
   createdAt: string;
   updatedAt: string;
   userId: string;

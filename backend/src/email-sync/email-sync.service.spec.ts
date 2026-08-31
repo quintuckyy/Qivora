@@ -514,6 +514,7 @@ describe('EmailSyncService', () => {
         company: 'Acme Robotics Corrected',
         position: 'Senior Backend Engineer',
         status: ApplicationStatus.APPLIED,
+        source: 'EMAIL_SYNC',
       });
       expect(prisma.processedEmail.update).toHaveBeenCalledWith({
         where: { id: 'row-1' },

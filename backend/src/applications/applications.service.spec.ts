@@ -91,6 +91,7 @@ describe('ApplicationsService', () => {
         salaryMax: 160000,
         location: 'Taguig, Metro Manila',
         jobUrl: 'https://careers.example.com/jobs/123',
+        source: 'MANUAL' as const,
       };
       const created = buildApplication();
       prisma.jobApplication.create.mockResolvedValue(created);
@@ -106,6 +107,7 @@ describe('ApplicationsService', () => {
           salaryMax: dto.salaryMax,
           location: dto.location,
           jobUrl: dto.jobUrl,
+          source: dto.source,
           userId,
         },
       });
@@ -272,6 +274,32 @@ describe('ApplicationsService', () => {
             userId,
             status: ApplicationStatus.INTERVIEW,
           }),
+        }),
+      );
+    });
+
+    it('filters to applications without a résumé when hasResume is false', async () => {
+      prisma.jobApplication.findMany.mockResolvedValue([]);
+      prisma.jobApplication.count.mockResolvedValue(0);
+
+      await service.findAll(userId, { ...baseQuery, hasResume: false });
+
+      expect(prisma.jobApplication.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({ userId, resumeId: null }),
+        }),
+      );
+    });
+
+    it('filters to applications with a résumé when hasResume is true', async () => {
+      prisma.jobApplication.findMany.mockResolvedValue([]);
+      prisma.jobApplication.count.mockResolvedValue(0);
+
+      await service.findAll(userId, { ...baseQuery, hasResume: true });
+
+      expect(prisma.jobApplication.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({ userId, resumeId: { not: null } }),
         }),
       );
     });

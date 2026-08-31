@@ -1,8 +1,9 @@
 import {
   ApiPropertyOptional,
 } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import {
+  IsBoolean,
   IsEnum,
   IsIn,
   IsInt,
@@ -52,6 +53,20 @@ export class QueryApplicationsDto {
   @IsOptional()
   @IsEnum(ApplicationStatus)
   status?: ApplicationStatus;
+
+  @ApiPropertyOptional({
+    description:
+      'Filter by whether a résumé is assigned. `true` returns only applications with a résumé, `false` only those without.',
+    example: false,
+  })
+  @IsOptional()
+  @Transform(({ value }) => {
+    if (value === true || value === 'true') return true;
+    if (value === false || value === 'false') return false;
+    return value;
+  })
+  @IsBoolean()
+  hasResume?: boolean;
 
   @ApiPropertyOptional({
     enum: [
