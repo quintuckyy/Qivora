@@ -8,6 +8,32 @@ Instead of functioning as a simple manual job tracker, Qivora combines a web das
 
 ---
 
+## Screenshots
+
+### Dashboard
+
+![Qivora dashboard — KPIs, application activity chart, and what needs attention](docs/screenshots/dashboard.png)
+
+### Applications & Analytics
+
+| Applications list | Analytics |
+| --- | --- |
+| ![Searchable, sortable applications table](docs/screenshots/applications.png) | ![Conversion funnel, time-to-milestone, and source breakdown](docs/screenshots/analytics.png) |
+
+### Email Sync & Résumés
+
+| Gmail-powered review queue | Résumé version tracking |
+| --- | --- |
+| ![Detected email updates staged for review](docs/screenshots/email-sync.png) | ![Multiple résumé versions with per-résumé performance](docs/screenshots/resumes.png) |
+
+### Browser Extension
+
+| Capture a posting from a job board | Confirmed in the tracker |
+| --- | --- |
+| ![Extension popup pre-filled from a LinkedIn posting](docs/screenshots/extension-capture.png) | ![Extension showing the job saved and marked applied](docs/screenshots/extension-saved.png) |
+
+---
+
 ## Features
 
 ### Job Application Management
