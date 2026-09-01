@@ -2295,13 +2295,7 @@ textarea {
 .card-chart .linechart {
   flex: 1;
   min-height: 0;
-}
-
-.card-chart .linechart-svg {
-  flex: 1;
-  min-height: 0;
-  width: 100%;
-  height: 100%;
+  justify-content: center;
 }
 
 .card-chart .state-empty {
@@ -2330,6 +2324,18 @@ textarea {
 
 .focus-section h2 {
   margin-bottom: 0.55rem;
+}
+
+.focus-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.focus-heading svg {
+  margin-right: 0;
+  color: var(--color-warning);
 }
 
 .focus-empty {
@@ -2547,16 +2553,50 @@ textarea {
   gap: 0.5rem;
 }
 
+.linechart-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 1rem;
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+}
+
+.linechart-summary strong {
+  color: var(--color-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.linechart-summary-peak {
+  color: var(--color-text-faint);
+}
+
+.linechart-plot {
+  position: relative;
+}
+
 .linechart-svg {
   display: block;
   width: 100%;
   height: auto;
   overflow: visible;
+  touch-action: pan-y;
 }
 
 .linechart-baseline {
+  stroke: var(--color-border-strong);
+  stroke-width: 1;
+}
+
+.linechart-grid {
   stroke: var(--color-border);
   stroke-width: 1;
+  stroke-dasharray: 2 4;
+}
+
+.linechart-axis-label {
+  fill: var(--color-text-faint);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
 }
 
 .linechart-line {
@@ -2565,23 +2605,157 @@ textarea {
   stroke-linecap: round;
   stroke-linejoin: round;
   filter: drop-shadow(0 2px 6px rgba(34, 211, 238, 0.35));
+  stroke-dasharray: 2400;
+  stroke-dashoffset: 2400;
+  animation: linechart-draw 0.75s cubic-bezier(0.65, 0, 0.35, 1) 0.05s forwards;
+  transition: filter 0.3s ease;
+}
+
+.linechart-svg.is-inspecting .linechart-line {
+  filter: drop-shadow(0 2px 12px rgba(34, 211, 238, 0.55));
+}
+
+.linechart-area {
+  opacity: 0;
+  animation: linechart-area-in 0.6s ease-out 0.45s forwards;
+}
+
+.linechart-crosshair {
+  stroke: var(--color-primary);
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+  opacity: 0.5;
+  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  animation: linechart-fade-in 0.18s ease-out;
 }
 
 .linechart-dot {
   fill: var(--color-bg-elevated);
   stroke: var(--color-primary);
   stroke-width: 2;
-  transition: r 0.15s ease;
+  transform-box: fill-box;
+  transform-origin: center;
+  /* springy overshoot on the radius change when a point becomes active */
+  transition: r 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), fill 0.2s ease, stroke 0.2s ease, opacity 0.2s ease;
+  animation: linechart-dot-in 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
 }
 
-.linechart-dot:hover {
-  r: 5;
+.linechart-dot-last {
+  fill: var(--color-primary);
+}
+
+.linechart-dot-active {
+  fill: var(--color-primary);
+  stroke: var(--color-bg-elevated);
+}
+
+.linechart-svg.is-inspecting .linechart-dot:not(.linechart-dot-active) {
+  opacity: 0.45;
+}
+
+.linechart-dot-halo {
+  fill: var(--color-primary);
+  opacity: 0.14;
+  pointer-events: none;
+  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  animation: linechart-fade-in 0.28s ease-out;
+}
+
+.linechart-capture {
+  fill: transparent;
+  cursor: crosshair;
+}
+
+.linechart-capture:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.linechart-tooltip {
+  position: absolute;
+  z-index: 5;
+  min-width: 12rem;
+  max-width: 15rem;
+  padding: 0.6rem 0.75rem;
+  background: color-mix(in srgb, var(--color-bg-elevated) 88%, transparent);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius);
+  box-shadow: 0 12px 30px -12px rgba(2, 6, 16, 0.8), 0 0 0 1px rgba(34, 211, 238, 0.06);
+  pointer-events: none;
+  opacity: 0;
+  /* glide between points; fade + settle on show/hide */
+  transition: left 0.22s cubic-bezier(0.16, 1, 0.3, 1), top 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.16s ease-out;
+}
+
+.linechart-tooltip[data-visible='true'] {
+  opacity: 1;
+}
+
+.linechart-tooltip-period {
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-faint);
+}
+
+.linechart-tooltip-value {
+  margin-top: 0.15rem;
+  font-size: 0.9rem;
+  color: var(--color-text-muted);
+}
+
+.linechart-tooltip-value strong {
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  color: var(--color-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.linechart-tooltip-rows {
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.linechart-tooltip-rows > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  font-size: 0.76rem;
+}
+
+.linechart-tooltip-rows dt {
+  color: var(--color-text-faint);
+}
+
+.linechart-tooltip-rows dd {
+  color: var(--color-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.linechart-delta-up {
+  color: var(--color-success);
+}
+
+.linechart-delta-down {
+  color: var(--color-danger);
+}
+
+.linechart-delta-flat {
+  color: var(--color-text-faint);
 }
 
 .linechart-labels {
   display: flex;
   gap: 0.4rem;
-  padding: 0 12px;
+  padding-left: 3.95%;
+  padding-right: 1.84%;
 }
 
 .linechart-label {
@@ -2589,6 +2763,78 @@ textarea {
   text-align: center;
   font-size: 0.72rem;
   color: var(--color-text-faint);
+  transition: color 0.12s ease;
+}
+
+.linechart-label-active {
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+@keyframes linechart-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes linechart-area-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes linechart-dot-in {
+  from {
+    opacity: 0;
+    transform: scale(0);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes linechart-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .linechart-line {
+    stroke-dasharray: none;
+    stroke-dashoffset: 0;
+    animation: none;
+  }
+
+  .linechart-area,
+  .linechart-dot,
+  .linechart-crosshair,
+  .linechart-dot-halo {
+    animation: none;
+  }
+
+  .linechart-area {
+    opacity: 1;
+  }
+
+  .linechart-dot-halo {
+    opacity: 0.14;
+  }
+
+  .linechart-line,
+  .linechart-crosshair,
+  .linechart-dot-halo,
+  .linechart-dot,
+  .linechart-label,
+  .linechart-tooltip {
+    transition: opacity 0.1s linear;
+  }
 }
 
 /* =========================================================================

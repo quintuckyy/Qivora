@@ -17,6 +17,7 @@ import { buildMonthlySeries, buildWeeklySeries, buildYearlySeries } from '../lib
 import { fetchAllApplications } from '../lib/fetchAllApplications';
 import {
   ActivityIcon,
+  AlertTriangleIcon,
   ArrowRightIcon,
   BriefcaseIcon,
   CheckCircleIcon,
@@ -228,13 +229,16 @@ export function DashboardPage() {
           {allApplications.length === 0 ? (
             <EmptyState message="Not enough data yet." />
           ) : (
-            <LineChart data={trendSeries} />
+            <LineChart data={trendSeries} granularity={range} />
           )}
         </section>
 
         <section className="card focus-card">
           <div className="focus-section">
-            <h2>Needs attention</h2>
+            <h2 className="focus-heading">
+              Needs attention
+              <AlertTriangleIcon width={16} height={16} />
+            </h2>
             {attentionItems.length === 0 ? (
               <div className="all-clear">
                 <CheckCircleIcon />

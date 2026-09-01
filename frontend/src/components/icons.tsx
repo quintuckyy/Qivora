@@ -371,6 +371,17 @@ export function InfoIcon(props: SVGProps<SVGSVGElement>) {
   );
 }
 
+/** Triangle with an exclamation mark — something needs attention. */
+export function AlertTriangleIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Icon {...props}>
+      <path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" />
+      <path d="M12 9v4" />
+      <path d="M12 17h.01" />
+    </Icon>
+  );
+}
+
 /** Two curved arrows chasing each other — a refresh / re-sync action. */
 export function RefreshIcon(props: SVGProps<SVGSVGElement>) {
   return (
