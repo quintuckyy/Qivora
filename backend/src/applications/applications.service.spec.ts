@@ -532,6 +532,61 @@ describe('ApplicationsService', () => {
     });
   });
 
+  describe('getAnalytics', () => {
+    it('builds an ever-reached funnel, milestone timing, and per-source conversion', async () => {
+      prisma.jobApplication.findMany.mockResolvedValue([
+        {
+          createdAt: new Date('2026-01-01T00:00:00.000Z'),
+          status: ApplicationStatus.OFFER,
+          source: null,
+          history: [
+            { toStatus: ApplicationStatus.INTERVIEW, changedAt: new Date('2026-01-11T00:00:00.000Z') },
+            { toStatus: ApplicationStatus.OFFER, changedAt: new Date('2026-01-21T00:00:00.000Z') },
+          ],
+        },
+        {
+          createdAt: new Date('2026-01-01T00:00:00.000Z'),
+          status: ApplicationStatus.REJECTED,
+          source: null,
+          history: [
+            { toStatus: ApplicationStatus.INTERVIEW, changedAt: new Date('2026-01-05T00:00:00.000Z') },
+          ],
+        },
+        {
+          createdAt: new Date('2026-02-01T00:00:00.000Z'),
+          status: ApplicationStatus.APPLIED,
+          source: 'LINKEDIN',
+          history: [],
+        },
+      ]);
+
+      const result = await service.getAnalytics(userId);
+
+      expect(result.funnel).toEqual({ applied: 3, assessment: 2, interview: 2, offer: 1 });
+      expect(result.timing).toEqual({
+        appliedToInterviewDays: 7,
+        appliedToOfferDays: 20,
+        interviewSampleSize: 2,
+        offerSampleSize: 1,
+      });
+      expect(result.bySource).toEqual([
+        { source: 'MANUAL', applications: 2, interviews: 2, offers: 1 },
+        { source: 'LINKEDIN', applications: 1, interviews: 0, offers: 0 },
+      ]);
+    });
+
+    it('returns null timing and an empty funnel when there are no applications', async () => {
+      prisma.jobApplication.findMany.mockResolvedValue([]);
+
+      const result = await service.getAnalytics(userId);
+
+      expect(result.funnel).toEqual({ applied: 0, assessment: 0, interview: 0, offer: 0 });
+      expect(result.timing.appliedToInterviewDays).toBeNull();
+      expect(result.timing.appliedToOfferDays).toBeNull();
+      expect(result.bySource).toEqual([]);
+    });
+  });
+
   describe('getStatistics', () => {
     const setCounts = (counts: Partial<Record<ApplicationStatus, number>>, total: number) => {
       prisma.jobApplication.count.mockImplementation(

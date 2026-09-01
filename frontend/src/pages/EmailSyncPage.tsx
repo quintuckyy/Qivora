@@ -10,7 +10,7 @@ import { ErrorState } from '../components/ErrorState';
 import { EmptyState } from '../components/EmptyState';
 import { StatusBadge } from '../components/StatusBadge';
 import { UndisclosedBadge } from '../components/UndisclosedBadge';
-import { ArrowRightIcon } from '../components/icons';
+import { ArrowRightIcon, CheckCircleIcon, InfoIcon, RefreshIcon } from '../components/icons';
 
 const TYPE_LABELS: Record<DetectedEmailType, string> = {
   APPLICATION_RECEIVED: 'Application received',
@@ -39,6 +39,17 @@ const TARGET_STATUS_LABEL: Record<DetectedEmailType, string> = {
   REJECTION: 'Rejected',
   OFFER: 'Offer',
   OTHER: '—',
+};
+
+// One-line plain-English summary of what the email was, shown under the company
+// name when no action is needed.
+const TYPE_SUMMARY: Record<DetectedEmailType, (role: string) => string> = {
+  APPLICATION_RECEIVED: (role) => `We received your application for ${role}`,
+  ASSESSMENT: (role) => `Assessment invitation for ${role}`,
+  INTERVIEW: (role) => `Interview invitation for ${role}`,
+  REJECTION: (role) => `Rejection notice for ${role}`,
+  OFFER: (role) => `Offer for ${role}`,
+  OTHER: (role) => `Update regarding ${role}`,
 };
 
 // Mirrors formatCooldown() on the backend (email-sync.service.ts) — kept in
@@ -87,68 +98,89 @@ function SuggestionCard({ suggestion, onResolved }: { suggestion: EmailSuggestio
     }
   }
 
-  const meta = [suggestion.extractedSource, suggestion.receivedAt ? new Date(suggestion.receivedAt).toLocaleDateString() : null]
-    .filter(Boolean)
-    .join(' • ');
+  const receivedOn = suggestion.receivedAt
+    ? new Date(suggestion.receivedAt).toLocaleDateString(undefined, {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+      })
+    : null;
+  const meta = [suggestion.extractedSource, receivedOn].filter(Boolean).join(' • ');
 
   return (
     <div className="card suggestion-card">
-      <span className={`status-badge ${TYPE_BADGE_CLASS[suggestion.detectedType]}`}>
-        {TYPE_LABELS[suggestion.detectedType]}
-      </span>
+      <div className="suggestion-body">
+        <span className={`status-badge ${TYPE_BADGE_CLASS[suggestion.detectedType]}`}>
+          {TYPE_LABELS[suggestion.detectedType]}
+        </span>
 
-      {isCreate ? (
-        <div className="field-row suggestion-edit">
-          <label className="field">
-            <span>Position</span>
-            <input value={position} onChange={(event) => setPosition(event.target.value)} />
-          </label>
-          <label className="field">
-            <span>Company</span>
-            <input value={company} onChange={(event) => setCompany(event.target.value)} />
-          </label>
-        </div>
-      ) : (
-        <div className="suggestion-heading">
-          <h3 className="suggestion-title">
-            {suggestion.extractedPosition ?? <UndisclosedBadge label="Position undisclosed" />}
-          </h3>
-          <p className="suggestion-company">
-            {suggestion.extractedCompany ?? <UndisclosedBadge label="Company undisclosed" />}
+        {isCreate ? (
+          <div className="field-row suggestion-edit">
+            <label className="field">
+              <span>Position</span>
+              <input value={position} onChange={(event) => setPosition(event.target.value)} />
+            </label>
+            <label className="field">
+              <span>Company</span>
+              <input value={company} onChange={(event) => setCompany(event.target.value)} />
+            </label>
+          </div>
+        ) : isNone ? (
+          <div className="suggestion-heading">
+            <h3 className="suggestion-title">
+              {suggestion.extractedCompany ?? <UndisclosedBadge label="Company undisclosed" />}
+            </h3>
+            <p className="suggestion-company">
+              {TYPE_SUMMARY[suggestion.detectedType](suggestion.extractedPosition ?? 'this role')}
+            </p>
+          </div>
+        ) : (
+          <div className="suggestion-heading">
+            <h3 className="suggestion-title">
+              {suggestion.extractedPosition ?? <UndisclosedBadge label="Position undisclosed" />}
+            </h3>
+            <p className="suggestion-company">
+              {suggestion.extractedCompany ?? <UndisclosedBadge label="Company undisclosed" />}
+            </p>
+          </div>
+        )}
+
+        {meta && <p className="suggestion-meta">{meta}</p>}
+
+        {isUpdate && suggestion.matchedApplication && (
+          <dl className="suggestion-transition">
+            <dt>Status change</dt>
+            <dd>
+              <StatusBadge status={suggestion.matchedApplication.status} />
+              <ArrowRightIcon className="suggestion-transition-arrow" />
+              <span className={`status-badge ${TYPE_BADGE_CLASS[suggestion.detectedType]}`}>
+                {TARGET_STATUS_LABEL[suggestion.detectedType]}
+              </span>
+            </dd>
+          </dl>
+        )}
+
+        {isNone &&
+          (suggestion.matchedApplication ? (
+            <p className="suggestion-note suggestion-note-ok">
+              <CheckCircleIcon className="suggestion-note-icon" />
+              No status changes needed. This application is already up to date.
+            </p>
+          ) : (
+            <p className="suggestion-note suggestion-note-warn">
+              <InfoIcon className="suggestion-note-icon" />
+              No matching application found. Dismiss this, or create it manually from the Applications page.
+            </p>
+          ))}
+
+        {error && (
+          <p className="form-error" role="alert">
+            {error}
           </p>
-        </div>
-      )}
+        )}
+      </div>
 
-      {meta && <p className="suggestion-meta">{meta}</p>}
-
-      {isUpdate && suggestion.matchedApplication && (
-        <dl className="suggestion-transition">
-          <dt>Status change</dt>
-          <dd>
-            <StatusBadge status={suggestion.matchedApplication.status} />
-            <ArrowRightIcon className="suggestion-transition-arrow" />
-            <span className={`status-badge ${TYPE_BADGE_CLASS[suggestion.detectedType]}`}>
-              {TARGET_STATUS_LABEL[suggestion.detectedType]}
-            </span>
-          </dd>
-        </dl>
-      )}
-
-      {isNone && (
-        <p className="muted suggestion-note">
-          {suggestion.matchedApplication
-            ? 'No status change needed — this application is already up to date.'
-            : 'No matching application found. Dismiss this, or create it manually from the Applications page.'}
-        </p>
-      )}
-
-      {error && (
-        <p className="form-error" role="alert">
-          {error}
-        </p>
-      )}
-
-      <div className="status-update-row">
+      <div className="suggestion-actions">
         {!isNone && (
           <button type="button" className="btn btn-primary" onClick={handleConfirm} disabled={confirming || dismissing}>
             {isUpdate
@@ -289,10 +321,15 @@ export function EmailSyncPage() {
   return (
     <div className="page">
       <div className="page-header">
-        <h1>Email Sync</h1>
+        <div className="page-heading">
+          <h1>Email Sync</h1>
+          <p className="page-subtitle">
+            Scan your email for application updates and turn them into tracked applications.
+          </p>
+        </div>
       </div>
 
-      <section className="card">
+      <section className="card gmail-card">
         <div className="card-header">
           <h2>Gmail connection</h2>
         </div>
@@ -307,21 +344,29 @@ export function EmailSyncPage() {
         {!exchanging && status === 'loading' && <LoadingState label="Checking connection…" />}
         {!exchanging && status === 'error' && <ErrorState message={statusError} onRetry={refetchStatus} />}
         {!exchanging && status === 'success' && gmailStatus.connected && (
-          <>
-            <p>
-              Connected as <strong>{gmailStatus.email}</strong>
-              {gmailStatus.lastSyncedAt && <> · Last synced {new Date(gmailStatus.lastSyncedAt).toLocaleString()}</>}
-              {inCooldown && <> · Sync available in {formatCooldown(cooldownRemainingMs)}</>}
-            </p>
+          <div className="gmail-connected-row">
+            <div className="gmail-connected">
+              <p className="gmail-connected-email">
+                <span className="gmail-status-dot" aria-hidden="true" />
+                Connected as <strong>{gmailStatus.email}</strong>
+              </p>
+              <p className="gmail-connected-meta">
+                {gmailStatus.lastSyncedAt
+                  ? `Last synced ${new Date(gmailStatus.lastSyncedAt).toLocaleString()}`
+                  : 'Not synced yet'}
+                {inCooldown && ` · Sync available in ${formatCooldown(cooldownRemainingMs)}`}
+              </p>
+            </div>
             <div className="status-update-row">
               <button type="button" className="btn btn-primary" onClick={handleSync} disabled={syncing || inCooldown}>
+                <RefreshIcon className={syncing ? 'icon-spin' : undefined} />
                 {syncing ? 'Syncing…' : inCooldown ? 'Synced' : 'Sync Gmail'}
               </button>
               <button type="button" className="btn btn-danger-solid" onClick={handleDisconnect} disabled={disconnecting}>
                 {disconnecting ? 'Disconnecting…' : 'Disconnect'}
               </button>
             </div>
-          </>
+          </div>
         )}
         {!exchanging && status === 'success' && !gmailStatus.connected && (
           <>
@@ -350,7 +395,12 @@ export function EmailSyncPage() {
       </section>
 
       <section>
-        <h2 className="section-title">Review queue</h2>
+        <h2 className="section-title review-queue-title">
+          Review queue
+          {suggestionsStatus === 'success' && suggestions.length > 0 && (
+            <span className="review-queue-count">{suggestions.length}</span>
+          )}
+        </h2>
         {suggestionsStatus === 'loading' && <LoadingState label="Loading suggestions…" />}
         {suggestionsStatus === 'error' && <ErrorState message={suggestionsError} onRetry={refetchSuggestions} />}
         {suggestionsStatus === 'success' &&

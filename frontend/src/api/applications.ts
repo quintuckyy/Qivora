@@ -1,5 +1,6 @@
 import { api } from './client';
 import type {
+  AnalyticsResponse,
   ApplicationHistoryEntry,
   ApplicationStatus,
   JobApplication,
@@ -72,4 +73,6 @@ export const applicationsApi = {
     api.get<ApplicationHistoryEntry[]>(`/applications/${id}/history`),
 
   statistics: () => api.get<StatisticsResponse>('/applications/statistics'),
+
+  analytics: () => api.get<AnalyticsResponse>('/applications/analytics'),
 };

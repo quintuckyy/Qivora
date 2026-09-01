@@ -131,6 +131,18 @@ export class ApplicationsController {
   }
 
   @ApiOperation({
+    summary:
+      'Get deeper job-search analytics: conversion funnel, milestone timing, per-source conversion, and month-over-month comparison',
+  })
+  @ApiOkResponse({
+    description: 'Analytics retrieved successfully',
+  })
+  @Get('analytics')
+  getAnalytics(@CurrentUser() user: JwtUser) {
+    return this.applicationsService.getAnalytics(user.sub);
+  }
+
+  @ApiOperation({
     summary: 'Check whether the caller already has an application for a job URL',
   })
   @ApiOkResponse({

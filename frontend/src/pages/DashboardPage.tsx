@@ -14,6 +14,7 @@ import { DonutChart } from '../components/DonutChart';
 import { FindJobsMenu } from '../components/FindJobsMenu';
 import { LineChart } from '../components/LineChart';
 import { buildMonthlySeries, buildWeeklySeries, buildYearlySeries } from '../lib/applicationSeries';
+import { fetchAllApplications } from '../lib/fetchAllApplications';
 import {
   ActivityIcon,
   ArrowRightIcon,
@@ -35,20 +36,6 @@ const STALE_AFTER_DAYS = 14;
 // and missing-résumé nudges only make sense for applications still in play.
 const OPEN_STATUSES: ApplicationStatus[] = ['APPLIED', 'ASSESSMENT', 'INTERVIEW'];
 const isOpen = (a: JobApplication) => OPEN_STATUSES.includes(a.status);
-
-// The list endpoint caps at 100 per page, so pulling the whole history for the
-// trend chart means paging through it — there's no bulk/export endpoint to use instead.
-async function fetchAllApplications(): Promise<JobApplication[]> {
-  const first = await applicationsApi.list({ page: 1, limit: 100, sortBy: 'createdAt', sortOrder: 'asc' });
-  if (first.meta.totalPages <= 1) return first.data;
-
-  const rest = await Promise.all(
-    Array.from({ length: first.meta.totalPages - 1 }, (_, i) =>
-      applicationsApi.list({ page: i + 2, limit: 100, sortBy: 'createdAt', sortOrder: 'asc' }),
-    ),
-  );
-  return [first.data, ...rest.map((r) => r.data)].flat();
-}
 
 // Statuses most likely to have a scheduled interview attached — narrows the
 // candidate pool so we don't fetch interviews for every application on the
@@ -341,7 +328,7 @@ export function DashboardPage() {
         <section className="card card-pipeline">
           <div className="card-header">
             <h2>Pipeline</h2>
-            <Link to="/statistics" className="btn btn-secondary">
+            <Link to="/analytics" className="btn btn-secondary">
               Details
             </Link>
           </div>

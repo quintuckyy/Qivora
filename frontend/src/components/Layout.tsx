@@ -37,9 +37,9 @@ function LayoutShell() {
             <FileIcon />
             <span>Resumes</span>
           </NavLink>
-          <NavLink to="/statistics">
+          <NavLink to="/analytics">
             <ChartIcon />
-            <span>Statistics</span>
+            <span>Analytics</span>
           </NavLink>
           <NavLink to="/email-sync">
             <MailIcon />

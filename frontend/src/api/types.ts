@@ -179,3 +179,30 @@ export interface StatisticsResponse {
     monthlyApplications: { month: string; count: number }[];
   };
 }
+
+export interface AnalyticsSourceRow {
+  /** One of LINKEDIN | JOBSTREET | INDEED | EMAIL_SYNC | MANUAL (null sources fold into MANUAL). */
+  source: string;
+  applications: number;
+  interviews: number;
+  offers: number;
+}
+
+export interface AnalyticsResponse {
+  /** Ever-reached counts — an application that was rejected after an interview
+   * still counts toward `assessment` and `interview`. */
+  funnel: {
+    applied: number;
+    assessment: number;
+    interview: number;
+    offer: number;
+  };
+  timing: {
+    /** Average days from Applied to first Interview; null when no application has reached one. */
+    appliedToInterviewDays: number | null;
+    appliedToOfferDays: number | null;
+    interviewSampleSize: number;
+    offerSampleSize: number;
+  };
+  bySource: AnalyticsSourceRow[];
+}

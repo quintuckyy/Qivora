@@ -441,6 +441,70 @@ describe('Applications (e2e)', () => {
     });
   });
 
+  describe('GET /applications/analytics', () => {
+    it('returns an empty funnel and null timing for a user with no applications', async () => {
+      const response = await request(app.getHttpServer())
+        .get('/applications/analytics')
+        .set('Authorization', authHeader)
+        .expect(200);
+
+      expect(response.body.funnel).toEqual({
+        applied: 0,
+        assessment: 0,
+        interview: 0,
+        offer: 0,
+      });
+      expect(response.body.timing.appliedToInterviewDays).toBeNull();
+      expect(response.body.bySource).toEqual([]);
+    });
+
+    it('counts every stage an application passed through, even after rejection', async () => {
+      const rejected = await createApplication({
+        source: 'LINKEDIN',
+        jobUrl: 'https://careers.example.com/jobs/lk',
+      });
+      await request(app.getHttpServer())
+        .patch(`/applications/${rejected.id}/status`)
+        .set('Authorization', authHeader)
+        .send({ status: 'INTERVIEW' })
+        .expect(200);
+      await request(app.getHttpServer())
+        .patch(`/applications/${rejected.id}/status`)
+        .set('Authorization', authHeader)
+        .send({ status: 'REJECTED' })
+        .expect(200);
+
+      await createApplication({
+        source: 'MANUAL',
+        jobUrl: 'https://careers.example.com/jobs/mn',
+      });
+
+      const response = await request(app.getHttpServer())
+        .get('/applications/analytics')
+        .set('Authorization', authHeader)
+        .expect(200);
+
+      expect(response.body.funnel).toEqual({
+        applied: 2,
+        assessment: 1,
+        interview: 1,
+        offer: 0,
+      });
+      expect(response.body.timing.interviewSampleSize).toBe(1);
+      expect(
+        response.body.bySource.find(
+          (row: { source: string }) => row.source === 'LINKEDIN',
+        ),
+      ).toEqual({ source: 'LINKEDIN', applications: 1, interviews: 1, offers: 0 });
+    });
+
+    it('requires authentication', async () => {
+      await request(app.getHttpServer())
+        .get('/applications/analytics')
+        .expect(401);
+    });
+  });
+
   describe('PATCH /applications/:id/status', () => {
     it('allows a valid forward transition and persists history', async () => {
       const created = await createApplication();

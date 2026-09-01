@@ -233,6 +233,23 @@ export function ArrowDownIcon(props: SVGProps<SVGSVGElement>) {
   );
 }
 
+export function ArrowUpIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Icon {...props}>
+      <path d="M12 20V4" />
+      <path d="M6 10l6-6 6 6" />
+    </Icon>
+  );
+}
+
+export function FunnelIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Icon {...props}>
+      <path d="M3 4.5h18l-7 8.5v6l-4 2v-8z" />
+    </Icon>
+  );
+}
+
 /** Alphabetical-sort-ascending glyph — "A" over "Z" beside a down arrow — so
  * the icon itself reads as "A to Z" rather than relying on a bare arrow's
  * rotation, which flips illegibly when it has to represent letter order. */
@@ -340,6 +357,28 @@ export function ArrowUpZAIcon(props: SVGProps<SVGSVGElement>) {
       <path d="M5.2 18h3.6" />
       <path d="M18 3v18" />
       <path d="M14 7l4-4 4 4" />
+    </Icon>
+  );
+}
+
+export function InfoIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Icon {...props}>
+      <circle cx="12" cy="12" r="9.5" />
+      <path d="M12 11v5.5" />
+      <path d="M12 7.75h.01" />
+    </Icon>
+  );
+}
+
+/** Two curved arrows chasing each other — a refresh / re-sync action. */
+export function RefreshIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Icon strokeWidth={3.0} {...props}>
+      <path d="M21 12a9 9 0 0 1-9 9 9 9 0 0 1-8.06-5" />
+      <path d="M3 12a9 9 0 0 1 9-9 9 9 0 0 1 8.06 5" />
+      <path d="M21 4v4h-4" />
+      <path d="M3 20v-4h4" />
     </Icon>
   );
 }

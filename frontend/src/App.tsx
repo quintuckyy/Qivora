@@ -11,7 +11,7 @@ import { ApplicationsListPage } from './pages/ApplicationsListPage';
 import { ApplicationCreatePage } from './pages/ApplicationCreatePage';
 import { ApplicationDetailPage } from './pages/ApplicationDetailPage';
 import { ResumesPage } from './pages/ResumesPage';
-import { StatisticsPage } from './pages/StatisticsPage';
+import { AnalyticsPage } from './pages/AnalyticsPage';
 import { EmailSyncPage } from './pages/EmailSyncPage';
 import { NotFoundPage } from './pages/NotFoundPage';
 
@@ -60,7 +60,9 @@ export function App() {
               <Route path="/applications/new" element={<ApplicationCreatePage />} />
               <Route path="/applications/:id" element={<ApplicationDetailPage />} />
               <Route path="/resumes" element={<ResumesPage />} />
-              <Route path="/statistics" element={<StatisticsPage />} />
+              <Route path="/analytics" element={<AnalyticsPage />} />
+              {/* Old bookmarks / links to the former "Statistics" page. */}
+              <Route path="/statistics" element={<Navigate to="/analytics" replace />} />
               <Route path="/email-sync" element={<EmailSyncPage />} />
             </Route>
           </Route>

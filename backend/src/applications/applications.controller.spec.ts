@@ -8,6 +8,7 @@ describe('ApplicationsController', () => {
     create: jest.Mock;
     findAll: jest.Mock;
     getStatistics: jest.Mock;
+    getAnalytics: jest.Mock;
     checkDuplicate: jest.Mock;
     findOne: jest.Mock;
     update: jest.Mock;
@@ -23,6 +24,7 @@ describe('ApplicationsController', () => {
       create: jest.fn(),
       findAll: jest.fn(),
       getStatistics: jest.fn(),
+      getAnalytics: jest.fn(),
       checkDuplicate: jest.fn(),
       findOne: jest.fn(),
       update: jest.fn(),
@@ -66,6 +68,16 @@ describe('ApplicationsController', () => {
     const result = await controller.getStatistics(user);
 
     expect(service.getStatistics).toHaveBeenCalledWith(user.sub);
+    expect(result).toBe(expected);
+  });
+
+  it('delegates getAnalytics to the service', async () => {
+    const expected = { funnel: { applied: 0, assessment: 0, interview: 0, offer: 0 } };
+    service.getAnalytics.mockResolvedValue(expected);
+
+    const result = await controller.getAnalytics(user);
+
+    expect(service.getAnalytics).toHaveBeenCalledWith(user.sub);
     expect(result).toBe(expected);
   });
 

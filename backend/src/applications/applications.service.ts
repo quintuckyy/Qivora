@@ -425,5 +425,111 @@ export class ApplicationsService {
         monthlyApplications,
         },
     };
-  }  
+  }
+
+  /** Deeper job-search analytics for the Analytics page: an ever-reached
+   * conversion funnel, average time between milestones, and per-source
+   * conversion. All derived from the applications and their status history —
+   * no new tables, one query. */
+  async getAnalytics(userId: string) {
+    const applications = await this.prisma.jobApplication.findMany({
+      where: { userId },
+      select: {
+        createdAt: true,
+        status: true,
+        source: true,
+        history: {
+          select: { toStatus: true, changedAt: true },
+          orderBy: { changedAt: 'asc' },
+        },
+      },
+    });
+
+    // Where each status sits in the forward funnel. REJECTED isn't a rung — a
+    // rejected application still counts for every stage it passed through first,
+    // which is why the status history matters and not just the current status.
+    const STAGE_RANK: Partial<Record<ApplicationStatus, number>> = {
+      [ApplicationStatus.APPLIED]: 0,
+      [ApplicationStatus.ASSESSMENT]: 1,
+      [ApplicationStatus.INTERVIEW]: 2,
+      [ApplicationStatus.OFFER]: 3,
+    };
+    const DAY_MS = 24 * 60 * 60 * 1000;
+
+    const funnel = { applied: 0, assessment: 0, interview: 0, offer: 0 };
+    const toInterviewDays: number[] = [];
+    const toOfferDays: number[] = [];
+    const sourceMap = new Map<
+      string,
+      { applications: number; interviews: number; offers: number }
+    >();
+
+    for (const application of applications) {
+      let peak = 0; // every application was at least APPLIED
+      const consider = (status: ApplicationStatus) => {
+        const rank = STAGE_RANK[status];
+        if (rank !== undefined && rank > peak) peak = rank;
+      };
+      consider(application.status);
+      for (const entry of application.history) consider(entry.toStatus);
+
+      funnel.applied += 1;
+      if (peak >= 1) funnel.assessment += 1;
+      if (peak >= 2) funnel.interview += 1;
+      if (peak >= 3) funnel.offer += 1;
+
+      const source = application.source ?? 'MANUAL';
+      const bucket =
+        sourceMap.get(source) ??
+        { applications: 0, interviews: 0, offers: 0 };
+      bucket.applications += 1;
+      if (peak >= 2) bucket.interviews += 1;
+      if (peak >= 3) bucket.offers += 1;
+      sourceMap.set(source, bucket);
+
+      const firstInterview = application.history.find(
+        (entry) => entry.toStatus === ApplicationStatus.INTERVIEW,
+      );
+      const firstOffer = application.history.find(
+        (entry) => entry.toStatus === ApplicationStatus.OFFER,
+      );
+      if (firstInterview) {
+        toInterviewDays.push(
+          (firstInterview.changedAt.getTime() -
+            application.createdAt.getTime()) /
+            DAY_MS,
+        );
+      }
+      if (firstOffer) {
+        toOfferDays.push(
+          (firstOffer.changedAt.getTime() - application.createdAt.getTime()) /
+            DAY_MS,
+        );
+      }
+    }
+
+    const average = (values: number[]) =>
+      values.length === 0
+        ? null
+        : Number(
+            (
+              values.reduce((sum, value) => sum + value, 0) / values.length
+            ).toFixed(1),
+          );
+
+    const bySource = Array.from(sourceMap.entries())
+      .map(([source, value]) => ({ source, ...value }))
+      .sort((a, b) => b.applications - a.applications);
+
+    return {
+      funnel,
+      timing: {
+        appliedToInterviewDays: average(toInterviewDays),
+        appliedToOfferDays: average(toOfferDays),
+        interviewSampleSize: toInterviewDays.length,
+        offerSampleSize: toOfferDays.length,
+      },
+      bySource,
+    };
+  }
 }

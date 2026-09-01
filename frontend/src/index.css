@@ -634,6 +634,16 @@ textarea {
   }
 }
 
+.icon-spin {
+  animation: spin 0.9s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .icon-spin {
+    animation: none;
+  }
+}
+
 .muted {
   color: var(--color-text-muted);
 }
@@ -2017,49 +2027,107 @@ textarea {
 .suggestion-list {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 0.85rem;
 }
 
+/* Card is split into an information column (left, gets the room) and a fixed
+ * action rail (right). Collapses to a stack on narrow screens. */
 .suggestion-card {
+  position: relative;
   display: flex;
-  flex-direction: column;
-  gap: 0.65rem;
+  align-items: flex-start;
+  gap: 1.5rem;
+  padding: 1.25rem 1.35rem;
 }
 
 .suggestion-card p {
   margin: 0;
 }
 
-/* .suggestion-card is a column flex container, so its children stretch to
- * full width by default (flexbox's cross-axis stretch) — fine for block
- * content, but it also stretched the badge (an inline-sized pill) into a
- * full-width bar. Opt just the badge back out to its natural compact size. */
-.suggestion-card > .status-badge {
+.suggestion-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+
+/* The badge is inline-sized, but a column flex parent stretches it — opt it
+ * back to its natural width. */
+.suggestion-body > .status-badge {
   align-self: flex-start;
+  margin-bottom: 0.15rem;
+}
+
+.suggestion-actions {
+  flex-shrink: 0;
+  align-self: flex-end;
+  display: flex;
+  flex-flow: row wrap;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+/* Narrow the create-suggestion inputs — they don't need the full card width,
+ * and a tighter field pairs better with the action row beside it. */
+.suggestion-edit {
+  max-width: 30rem;
+}
+
+@media (max-width: 640px) {
+  .suggestion-card {
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .suggestion-meta {
+    position: static;
+    text-align: left;
+  }
+
+  .suggestion-edit {
+    max-width: none;
+  }
+
+  .suggestion-actions {
+    align-self: stretch;
+  }
+
+  .suggestion-actions .btn {
+    flex: 1;
+  }
 }
 
 .suggestion-heading {
   display: flex;
   flex-direction: column;
-  gap: 0.2rem;
+  gap: 0.3rem;
 }
 
 .suggestion-title {
   margin: 0;
-  font-size: 1.1rem;
+  font-size: 1.05rem;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
 }
 
 .suggestion-company {
   color: var(--color-text-muted);
   font-weight: 500;
+  font-size: 0.92rem;
 }
 
 /* text-faint measures ~2.8–3.4:1 against these dark surfaces — below WCAG
  * AA's 4.5:1 floor for small text. text-muted (~5.3–6.4:1) passes with
  * room to spare while still reading as clearly secondary. */
 .suggestion-meta {
-  font-size: 0.78rem;
+  position: absolute;
+  top: 1.25rem;
+  right: 1.35rem;
+  margin: 0;
+  font-size: 0.76rem;
   color: var(--color-text-muted);
+  text-align: right;
 }
 
 /* A boxed callout — visually sets the status change apart as the one piece
@@ -2067,18 +2135,20 @@ textarea {
  * of plain text among several. Reuses the same uppercase-label-over-value
  * language as .detail-grid (ApplicationDetailPage) for the label itself. */
 .suggestion-transition {
-  margin: 0;
+  margin: 0.1rem 0 0;
+  align-self: flex-start;
+  max-width: 100%;
   background: var(--color-surface-2);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
-  padding: 0.6rem 0.85rem;
+  padding: 0.55rem 0.8rem;
 }
 
 .suggestion-transition dt {
-  font-size: 0.72rem;
+  font-size: 0.68rem;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--color-text-muted);
+  letter-spacing: 0.05em;
+  color: var(--color-text-faint);
   margin-bottom: 0.4rem;
 }
 
@@ -2086,18 +2156,115 @@ textarea {
   margin: 0;
   display: flex;
   align-items: center;
-  gap: 0.55rem;
+  gap: 0.5rem;
 }
 
 .suggestion-transition-arrow {
   flex-shrink: 0;
-  width: 15px;
-  height: 15px;
-  color: var(--color-text-muted);
+  width: 14px;
+  height: 14px;
+  color: var(--color-text-faint);
 }
 
 .suggestion-note {
-  font-size: 0.88rem;
+  margin: 0;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.45rem;
+  font-size: 0.86rem;
+  line-height: 1.5;
+  color: var(--color-text-muted);
+}
+
+.suggestion-note-icon {
+  flex-shrink: 0;
+  width: 15px;
+  height: 15px;
+  margin-top: 0.13rem;
+}
+
+.suggestion-note-ok {
+  color: var(--color-success);
+}
+
+.suggestion-note-warn {
+  color: var(--color-warning);
+}
+
+/* --- Review queue section title with count --- */
+
+.review-queue-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.review-queue-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.25rem;
+  height: 1.25rem;
+  padding: 0 0.4rem;
+  border-radius: 999px;
+  background: var(--color-primary-soft);
+  border: 1px solid var(--color-primary-border);
+  color: var(--color-primary);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0;
+}
+
+/* --- Gmail connection status --- */
+
+.gmail-card {
+  padding-top: 1.2rem;
+  padding-bottom: 1.2rem;
+}
+
+.gmail-card > :last-child {
+  margin-bottom: 0;
+}
+
+.gmail-connected-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.25rem;
+  flex-wrap: wrap;
+}
+
+.gmail-connected {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.gmail-connected-row .status-update-row {
+  flex-shrink: 0;
+}
+
+.gmail-connected-email {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  font-size: 0.95rem;
+}
+
+.gmail-status-dot {
+  width: 8px;
+  height: 8px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--color-success);
+  box-shadow: 0 0 0 3px var(--color-success-soft);
+}
+
+.gmail-connected-meta {
+  margin: 0;
+  padding-left: 1.15rem;
+  font-size: 0.82rem;
   color: var(--color-text-muted);
 }
 
@@ -3414,5 +3581,282 @@ textarea {
   margin: 0;
   font-size: 0.88rem;
   max-width: 36ch;
+}
+
+/* =========================================================================
+   Analytics page
+   ========================================================================= */
+
+.analytics-grid {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: 1.25rem;
+  align-items: stretch;
+}
+
+@media (max-width: 960px) {
+  .analytics-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Inline icon inside a card heading */
+.card h2 svg {
+  vertical-align: -0.16em;
+  margin-right: 0.4rem;
+  color: var(--color-text-muted);
+}
+
+/* Small secondary line under a stat tile's label */
+.metric-caption {
+  color: var(--color-text-faint);
+  font-size: 0.76rem;
+  line-height: 1.4;
+}
+
+.stat-tile .metric-caption {
+  margin-top: -0.35rem;
+}
+
+/* --- Conversion funnel --- minimal single-hue bar funnel --- */
+
+.funnel-card .card-header {
+  flex-wrap: wrap;
+}
+
+.funnel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  margin-top: 0.35rem;
+}
+
+.funnel-row {
+  display: grid;
+  grid-template-columns: 5.5rem 1fr 2rem 2.75rem;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.funnel-label {
+  font-size: 0.82rem;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.funnel-track {
+  position: relative;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--color-surface-2);
+}
+
+.funnel-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  min-width: 2px;
+  border-radius: 0 999px 999px 0;
+  background: var(--color-primary);
+  transition: width 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.funnel-count {
+  font-size: 0.9rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  color: var(--color-text);
+}
+
+/* step-conversion vs the previous stage — a small down-caret marks it as a
+   drop-through rate rather than a share of the total */
+.funnel-step {
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  color: var(--color-text-faint);
+}
+
+.funnel-step:not(:empty)::before {
+  content: '';
+  display: inline-block;
+  width: 0;
+  height: 0;
+  margin-right: 0.25rem;
+  vertical-align: 0.5px;
+  border-left: 3px solid transparent;
+  border-right: 3px solid transparent;
+  border-top: 4px solid currentColor;
+}
+
+.funnel-footnote {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 1.1rem 0 0;
+  padding-top: 1rem;
+  border-top: 1px solid var(--color-border);
+  font-size: 0.82rem;
+  color: var(--color-text-muted);
+}
+
+.funnel-footnote svg {
+  color: var(--color-text-faint);
+  flex-shrink: 0;
+}
+
+@media (max-width: 480px) {
+  .funnel-row {
+    grid-template-columns: 4.5rem 1fr 1.5rem 2.25rem;
+    gap: 0.6rem;
+  }
+}
+
+/* --- Milestone timeline --- */
+
+.milestone {
+  list-style: none;
+  margin: 0.5rem 0 0;
+  padding: 0;
+  display: flex;
+  align-items: center;
+}
+
+.milestone-node {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  flex-shrink: 0;
+}
+
+.milestone-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--color-primary-soft);
+  box-shadow: inset 0 0 0 2px var(--color-primary);
+}
+
+.milestone-dot-offer {
+  background: var(--color-success-soft);
+  box-shadow: inset 0 0 0 2px var(--color-success);
+}
+
+.milestone-name {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+.milestone-gap {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  min-width: 44px;
+  align-self: flex-start;
+  margin-top: 6px;
+}
+
+.milestone-gap::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 2px;
+  background: repeating-linear-gradient(
+    90deg,
+    var(--color-border-strong) 0 5px,
+    transparent 5px 10px
+  );
+}
+
+.milestone-days {
+  position: relative;
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  font-size: 0.73rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+/* --- By source --- */
+
+.source-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.source-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.source-head {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  font-size: 0.88rem;
+}
+
+.source-logo {
+  border-radius: 5px;
+  flex-shrink: 0;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+.source-glyph {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  color: var(--color-text-muted);
+}
+
+.source-name {
+  font-weight: 600;
+}
+
+.source-count {
+  margin-left: auto;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.source-sub {
+  font-size: 0.76rem;
+}
+
+/* --- Resume performance table --- */
+
+.analytics-table .mini-tag {
+  margin-left: 0.5rem;
+}
+
+.analytics-table td a {
+  color: var(--color-text);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.analytics-table td a:hover {
+  color: var(--color-primary);
 }
 
