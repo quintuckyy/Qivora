@@ -1688,7 +1688,19 @@ textarea {
   flex-wrap: wrap;
 }
 
+/* The toolbar, the optional filter-chips row, and the table read as one block —
+   pull them tight instead of inheriting the full 1.5rem page gap between each. */
+.toolbar + .applications-results,
+.toolbar + .applications-view {
+  margin-top: -.1rem;
+}
+
+.applications-results + .applications-view {
+  margin-top: -0.6rem;
+}
+
 .applications-count {
+  margin-left: auto;
   font-size: 0.85rem;
   font-weight: 600;
   color: var(--color-text-muted);

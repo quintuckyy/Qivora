@@ -134,7 +134,10 @@ export function ApplicationsListPage() {
   return (
     <div className="page">
       <div className="page-header">
-        <h1>Applications</h1>
+        <div className="page-heading">
+          <h1>Applications</h1>
+          <p className="page-subtitle">Every role you&rsquo;ve applied to, tracked in one place.</p>
+        </div>
         <Link to="/applications/new" className="btn btn-primary">
           <PlusIcon />
           New application
@@ -184,17 +187,20 @@ export function ApplicationsListPage() {
             order={sortOrder}
             onToggle={() => patchParams({ sortOrder: sortOrder === 'asc' ? 'desc' : 'asc' })}
           />
+
+          {result && asyncStatus !== 'error' && (
+            <span className="applications-count">
+              {result.meta.total} {result.meta.total === 1 ? 'application' : 'applications'}
+            </span>
+          )}
         </div>
       </div>
 
       {asyncStatus === 'loading' && !result && <LoadingState label="Loading applications…" />}
       {asyncStatus === 'error' && <ErrorState message={error} onRetry={refetch} />}
 
-      {result && asyncStatus !== 'error' && (result.data.length > 0 || hasActiveFilters) && (
+      {result && asyncStatus !== 'error' && (resumeIdFilter || hasActiveFilters) && (
         <div className="applications-results">
-          <span className="applications-count">
-            {result.meta.total} {result.meta.total === 1 ? 'application' : 'applications'}
-          </span>
           {resumeIdFilter && (
             <button type="button" className="clear-filters" onClick={clearResumeFilter}>
               <XIcon />
