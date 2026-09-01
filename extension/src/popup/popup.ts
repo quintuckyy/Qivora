@@ -8,7 +8,6 @@ import {
 import { FRONTEND_URL } from '../services/config';
 import { ApiError } from '../services/api-client';
 import { emptyJob, type ExtractedJob } from '../platforms/types';
-import { PLATFORM_LABELS } from '../platforms';
 import type { ExtractJobMessage, ExtractJobResponse } from '../content/content-script';
 
 const app = document.getElementById('app')!;
@@ -18,6 +17,15 @@ function escapeHtml(value: string): string {
   div.textContent = value;
   return div.innerHTML;
 }
+
+/** Circular check, right-aligned in the saved card as the "this is in Qivora" cue. */
+const SAVED_CHECK = `
+  <svg class="saved-check" viewBox="0 0 24 24" role="img" aria-label="Saved">
+    <circle cx="12" cy="12" r="10" fill="currentColor" opacity="0.16" />
+    <path d="M7.5 12.5l3 3 6-6.5" fill="none" stroke="currentColor" stroke-width="2"
+      stroke-linecap="round" stroke-linejoin="round" />
+  </svg>
+`;
 
 /** Declarative content_scripts alone miss two common cases: a tab that was
  * already open before the extension loaded, and a same-page SPA navigation
@@ -91,7 +99,7 @@ function renderLoading(message = 'Checking your session…') {
 function renderLogin(error?: string) {
   app.innerHTML = `
     <h2>Log in</h2>
-    <p>Use your Job Tracker account to save jobs from here.</p>
+    <p>Use your Qivora account to save jobs straight from the posting.</p>
     ${error ? `<div class="banner banner-error">${escapeHtml(error)}</div>` : ''}
     <form id="login-form" class="card">
       <label class="field">
@@ -124,73 +132,48 @@ function renderLogin(error?: string) {
   });
 }
 
-function renderSaved(user: StoredUser, application: CreatedApplication) {
+function renderSavedCard(
+  application: { id: string; position: string; company: string; status: string },
+  subline: string,
+) {
   app.innerHTML = `
-    <div class="footer-row">
-      <p>Signed in as ${escapeHtml(user.email)}</p>
-      <button type="button" class="btn-link" id="logout-btn">Log out</button>
-    </div>
-    <div class="card">
-      <div class="banner banner-success">Applied successfully</div>
-      <div>
-        <p class="value">${escapeHtml(application.position)}</p>
-        <p class="value-sub">${escapeHtml(application.company)} · ${escapeHtml(application.status)}</p>
+    <div class="card saved-card">
+      <div class="saved-main">
+        <div class="saved-info">
+          <p class="value">${escapeHtml(application.position)}</p>
+          <p class="value-sub">${escapeHtml(subline)}</p>
+        </div>
+        ${SAVED_CHECK}
       </div>
-      <a href="${escapeHtml(FRONTEND_URL)}/applications/${application.id}" target="_blank" rel="noreferrer">View in Job Tracker ↗</a>
+      <a class="btn btn-primary saved-link" href="${escapeHtml(FRONTEND_URL)}/applications/${application.id}" target="_blank" rel="noreferrer">View in Qivora ↗</a>
     </div>
   `;
-
-  document.getElementById('logout-btn')!.addEventListener('click', async () => {
-    await clearSession();
-    await start();
-  });
 }
 
-function renderAlreadySaved(user: StoredUser, application: ExistingApplicationSummary) {
+function renderSaved(application: CreatedApplication) {
+  renderSavedCard(application, `${application.company} · ${application.status}`);
+}
+
+function renderAlreadySaved(application: ExistingApplicationSummary) {
   const savedOn = new Date(application.createdAt).toLocaleDateString();
-
-  app.innerHTML = `
-    <div class="footer-row">
-      <p>Signed in as ${escapeHtml(user.email)}</p>
-      <button type="button" class="btn-link" id="logout-btn">Log out</button>
-    </div>
-    <div class="card">
-      <div class="banner banner-info">Already saved to Job Tracker</div>
-      <div>
-        <p class="value">${escapeHtml(application.position)}</p>
-        <p class="value-sub">${escapeHtml(application.company)} · ${escapeHtml(application.status)} · added ${escapeHtml(savedOn)}</p>
-      </div>
-      <a href="${escapeHtml(FRONTEND_URL)}/applications/${application.id}" target="_blank" rel="noreferrer">View in Job Tracker ↗</a>
-    </div>
-  `;
-
-  document.getElementById('logout-btn')!.addEventListener('click', async () => {
-    await clearSession();
-    await start();
-  });
+  renderSavedCard(application, `${application.company} · ${application.status} · added ${savedOn}`);
 }
 
 interface ReadyOptions {
   user: StoredUser;
   supported: boolean;
-  platform: string | null;
   job: ExtractedJob;
   saving?: boolean;
   errorText?: string;
 }
 
 function renderReady(opts: ReadyOptions) {
-  const { user, supported, platform, job, errorText, saving } = opts;
-  const platformLabel = platform ? PLATFORM_LABELS[platform] ?? platform : null;
+  const { user, supported, job, errorText, saving } = opts;
 
   app.innerHTML = `
-    <div class="footer-row">
-      <p>Signed in as ${escapeHtml(user.email)}</p>
-      <button type="button" class="btn-link" id="logout-btn">Log out</button>
-    </div>
     ${
-      supported && platformLabel
-        ? `<div class="banner banner-info">Detected: ${escapeHtml(platformLabel)}</div>`
+      supported
+        ? ''
         : `<div class="banner">Open a LinkedIn, Indeed, or JobStreet job posting to auto-fill these fields — you can also fill them in by hand.</div>`
     }
     ${errorText ? `<div class="banner banner-error">${escapeHtml(errorText)}</div>` : ''}
@@ -222,15 +205,10 @@ function renderReady(opts: ReadyOptions) {
         </label>
       </div>
       <button type="submit" class="btn btn-primary" id="save-btn" ${saving ? 'disabled' : ''}>
-        ${saving ? 'Saving…' : 'Save to Job Tracker'}
+        ${saving ? 'Saving…' : 'Save to Qivora'}
       </button>
     </form>
   `;
-
-  document.getElementById('logout-btn')!.addEventListener('click', async () => {
-    await clearSession();
-    await start();
-  });
 
   const form = document.getElementById('save-form') as HTMLFormElement;
   form.addEventListener('submit', async (event) => {
@@ -248,7 +226,7 @@ function renderReady(opts: ReadyOptions) {
       salaryMax: salaryMaxRaw ? Number(salaryMaxRaw) : undefined,
     };
 
-    renderReady({ user, supported, platform, job: nextJob, saving: true });
+    renderReady({ user, supported, job: nextJob, saving: true });
 
     const session = await getSession();
     if (!session) {
@@ -258,7 +236,7 @@ function renderReady(opts: ReadyOptions) {
 
     try {
       const created = await saveApplication(nextJob, session.token);
-      renderSaved(user, created);
+      renderSaved(created);
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
         await clearSession();
@@ -266,7 +244,7 @@ function renderReady(opts: ReadyOptions) {
         return;
       }
       const message = err instanceof ApiError ? err.message : 'Unable to save this application.';
-      renderReady({ user, supported, platform, job: nextJob, errorText: message });
+      renderReady({ user, supported, job: nextJob, errorText: message });
     }
   });
 }
@@ -298,7 +276,7 @@ async function start() {
     try {
       const duplicate = await checkDuplicate(job.jobUrl, session.token);
       if (duplicate.exists && duplicate.application) {
-        renderAlreadySaved(session.user, duplicate.application);
+        renderAlreadySaved(duplicate.application);
         return;
       }
     } catch (err) {
@@ -312,7 +290,7 @@ async function start() {
     }
   }
 
-  renderReady({ user: session.user, supported: extraction.supported, platform: extraction.platform, job });
+  renderReady({ user: session.user, supported: extraction.supported, job });
 }
 
 start();

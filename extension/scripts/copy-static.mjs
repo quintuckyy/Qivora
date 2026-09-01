@@ -11,6 +11,7 @@ const files = [
   ['manifest.json', 'manifest.json'],
   ['src/popup/popup.html', 'popup.html'],
   ['src/popup/popup.css', 'popup.css'],
+  ['src/popup/icon-128.png', 'icon-128.png'],
 ];
 
 for (const [from, to] of files) {

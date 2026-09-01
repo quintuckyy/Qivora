@@ -87,6 +87,12 @@ touched or stored.
 token is still valid when the popup opens, so an expired session shows the
 login form again instead of failing silently on save.
 
+The popup calls the API from its `chrome-extension://<id>` origin, so the
+backend's CORS allowlist has to accept it. `backend/src/main.ts` allows any
+`chrome-extension://` origin outside production (the unpacked id changes on
+every reload); for a production deployment, add the published extension's
+`chrome-extension://<id>` origin to `FRONTEND_ORIGIN`.
+
 ### Duplicate detection
 
 Before showing the editable save form, the popup calls
@@ -169,12 +175,13 @@ see **Known limitations**.
   session (no interactive browser UI available here) — the popup's
   login/save/duplicate-check flow was verified by exercising the same API
   calls it makes against the real running backend, not by clicking through
-  the extension itself. `chrome.storage`, `chrome.tabs.sendMessage`, and the
-  host_permissions-based CORS bypass are all standard, documented MV3
-  behavior, but please do the manual pass described above before treating
-  multi-platform support as fully done.
-- **No icons.** `manifest.json` omits `icons`/`action.default_icon`, so
-  Chrome shows a generic default icon in the toolbar. Cosmetic only.
+  the extension itself. `chrome.storage` and `chrome.tabs.sendMessage` are
+  standard, documented MV3 behavior, but please do the manual pass described
+  above before treating multi-platform support as fully done.
+- **The toolbar icon is a downscale of the 330×330 Qivora mark**
+  (`src/popup/icon-128.png`), declared for every size slot. Chrome scales it
+  per context; hand-tuned 16/32 px exports would be crisper but aren't
+  generated here.
 - Extraction only covers a single job-posting page per platform (LinkedIn
   `/jobs/view/*`, Indeed `/viewjob` and `/jobs?vjk=`, JobStreet `/job/*`) —
   none of the three platforms' search/listing pages are scraped in bulk.
