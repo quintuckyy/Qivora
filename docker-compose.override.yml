@@ -1,0 +1,16 @@
+# Local-development overrides. Docker Compose loads this automatically on a bare
+# `docker compose up`. It is deliberately NOT loaded when you pass explicit `-f`
+# flags, so the production command
+#
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+#
+# never picks it up.
+#
+# Purpose: expose Postgres to the host machine only (127.0.0.1) so local tools —
+# psql, Prisma Studio, the backend's e2e tests — can reach it. It is never bound
+# to 0.0.0.0, so it is not reachable from the network even locally.
+
+services:
+  postgres:
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"

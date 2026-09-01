@@ -9,8 +9,11 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-jobtracker}
       POSTGRES_DB: ${POSTGRES_DB:-jobtracker}
 
-    ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+    # No published port by default — the database is reachable only from other
+    # services on the internal `job-tracker` network. docker-compose.override.yml
+    # re-exposes it on 127.0.0.1 for local development (psql, Prisma Studio,
+    # e2e tests); that override is NOT loaded when you pass explicit -f flags,
+    # so the production command never publishes it. See DEPLOYMENT.md.
 
     volumes:
       - postgres_data:/var/lib/postgresql/data
