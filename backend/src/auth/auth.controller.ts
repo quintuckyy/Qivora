@@ -1,10 +1,12 @@
 import { Body, Controller, Post } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { GoogleLoginDto } from './dto/google-login.dto';
+import { AUTH_LIMIT, PASSWORD_RESET_LIMIT } from '../config/throttling';
 import {
   ApiCreatedResponse,
   ApiOkResponse,
@@ -12,7 +14,11 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 
+// Every credential endpoint below is rate-limited per client IP on top of the
+// app-wide baseline (see AppModule) — brute force, credential stuffing, and
+// reset-email mail-bombing all hit here first.
 @ApiTags('auth')
+@Throttle({ default: AUTH_LIMIT })
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
@@ -75,6 +81,7 @@ export class AuthController {
       },
     },
   })
+  @Throttle({ default: PASSWORD_RESET_LIMIT })
   @Post('forgot-password')
   forgotPassword(@Body() dto: ForgotPasswordDto) {
     return this.authService.forgotPassword(dto);

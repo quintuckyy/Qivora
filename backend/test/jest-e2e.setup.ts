@@ -19,3 +19,7 @@ if (!/_test(\?|$)/.test(process.env.DATABASE_URL_TEST)) {
 // before any module is compiled, ensures every e2e run targets the test database only.
 process.env.DATABASE_URL = process.env.DATABASE_URL_TEST;
 process.env.NODE_ENV = 'test';
+
+// The suites hammer auth endpoints far faster than any human; rate limiting is
+// off by default for e2e and turned back on only by the dedicated throttle spec.
+process.env.THROTTLE_ENABLED = 'false';
