@@ -151,8 +151,10 @@ function detectType(subject: string, body: string): { type: DetectedEmailType; c
 
 /** From-header display name as a last resort company hint, e.g.
  * '"Acme Robotics Recruiting" <careers@acmerobotics.com>' -> "Acme Robotics".
- * Only used when no provider (platform-specific or generic) found a
- * company in the subject/body text. A bare address with no "Name <addr>"
+ * Only used for a generic ATS sender when nothing in the subject/body text
+ * gave a company — never for a job board / aggregator (Indeed, LinkedIn,
+ * JobStreet), whose display name is the platform's own brand ("Indeed Apply",
+ * "LinkedIn Jobs"), not the employer. A bare address with no "Name <addr>"
  * structure has no display name to fall back to — treating the raw email
  * address itself as a "company" would be a guess, not an extraction, so
  * this returns null rather than doing that. */
@@ -219,7 +221,14 @@ export function classifyEmail(input: EmailInput): ExtractedEmailInfo {
   const fallback = provider === genericProvider ? extraction : genericProvider.extract(normalizedInput);
 
   const position = extraction.position ?? fallback.position;
-  const company = extraction.company ?? fallback.company ?? companyFromDisplayName(from);
+  // Display-name fallback only for a generic sender — see companyFromDisplayName.
+  // A platform email with no company in its text stays company-less rather than
+  // borrowing the platform's brand name, which would then false-match an
+  // unrelated tracked application and read as "already up to date".
+  const company =
+    extraction.company ??
+    fallback.company ??
+    (provider === genericProvider ? companyFromDisplayName(from) : null);
   const applicationDate = extraction.applicationDate ?? fallback.applicationDate;
   const source = provider === genericProvider ? detectSource(from) : provider.id;
 

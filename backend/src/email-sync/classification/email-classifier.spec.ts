@@ -110,6 +110,25 @@ describe('classifyEmail', () => {
     expect(result.company).toBe('BrightPath Software');
   });
 
+  // Regression: an Indeed "Indeed Application: <position>" email whose body
+  // never names the employer used to borrow the sender's display name
+  // ("Indeed Apply") as the company. That bogus company then substring-matched
+  // an unrelated tracked application, so the suggestion read "already up to
+  // date" for a job the user had never recorded. A platform email with no
+  // company in its text must stay company-less.
+  it('does not use a job board sender display name as the company', () => {
+    const result = classifyEmail({
+      subject: 'Indeed Application: React Native Developer (fully onsite)',
+      bodyText: 'Your application has been submitted.\nReact Native Developer (fully onsite)\nView your application on Indeed.',
+      from: '"Indeed Apply" <indeedapply@indeed.com>',
+    });
+
+    expect(result.type).toBe('APPLICATION_RECEIVED');
+    expect(result.position).toBe('React Native Developer (fully onsite)');
+    expect(result.company).toBeNull();
+    expect(result.source).toBe('Indeed');
+  });
+
   it('never throws on an empty message', () => {
     expect(() => classifyEmail({ subject: '', bodyText: '', from: '' })).not.toThrow();
     const result = classifyEmail({ subject: '', bodyText: '', from: '' });
